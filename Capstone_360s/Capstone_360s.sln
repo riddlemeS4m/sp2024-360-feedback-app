@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34601.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Capstone_360s", "Capstone_360s.csproj", "{B009BA05-3394-4146-9435-21FCA61F85BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Capstone_360s_Testing_Suite", "..\Capstone_360s_Testing_Suite\Capstone_360s_Testing_Suite.csproj", "{BED0FF02-0839-4621-B86A-F22CA320C36A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B009BA05-3394-4146-9435-21FCA61F85BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B009BA05-3394-4146-9435-21FCA61F85BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B009BA05-3394-4146-9435-21FCA61F85BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B009BA05-3394-4146-9435-21FCA61F85BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BED0FF02-0839-4621-B86A-F22CA320C36A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BED0FF02-0839-4621-B86A-F22CA320C36A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BED0FF02-0839-4621-B86A-F22CA320C36A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BED0FF02-0839-4621-B86A-F22CA320C36A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BCD4B9E5-A260-4E84-BE5A-8CA6F4565202}
+	EndGlobalSection
+EndGlobal

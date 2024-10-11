@@ -1,0 +1,39 @@
+﻿@model Capstone_360s.Models.FeedbackDb.Timeframe
+
+@{
+    ViewData["Title"] = "Create Timeframe";
+}
+
+<h4>Create Timeframe</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="TimeframeCreate">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="OrganizationId" />
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NoOfProjects" class="control-label"></label>
+                <input type="number" class="form-control" asp-for="NoOfProjects" />
+                <span asp-validation-for="NoOfProjects" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="TimeframesIndex" asp-route-organizationId="@Model.OrganizationId">Back</a>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

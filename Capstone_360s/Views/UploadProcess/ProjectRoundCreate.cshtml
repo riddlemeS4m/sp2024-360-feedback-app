@@ -1,0 +1,93 @@
+﻿@model Capstone_360s.Models.FeedbackDb.Project
+
+@{
+    ViewData["Title"] = "Create Rounds";
+}
+
+<h4>Create Rounds</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="ProjectRoundCreate">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="OrganizationId" />
+            <input type="hidden" asp-for="TimeframeId" />
+
+            <div class="form-group">
+                <label asp-for="NoOfRounds" class="control-label"></label>
+                <input type="number" id="noOfRounds" class="form-control" min="1" asp-for="NoOfRounds" />
+                <span asp-validation-for="NoOfRounds" class="text-danger"></span>
+            </div>
+
+            <div id="round-dates-container">
+                <!-- This will be populated by JavaScript -->
+            </div>
+            <br />
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId">Back</a>
+</div>
+
+@section Scripts {
+
+    <script>
+        document.getElementById('noOfRounds').addEventListener('input', function () {
+            const noOfRounds = parseInt(this.value) || 0;
+            const container = document.getElementById('round-dates-container');
+
+            // Clear any existing inputs
+            container.innerHTML = '';
+
+            // Create new inputs based on the number entered
+            for (let i = 0; i < noOfRounds; i++) {
+                const br = document.createElement('br');
+                container.appendChild(br);
+
+                const divStart = document.createElement('div');
+                divStart.classList.add('form-group');
+
+                const labelStart = document.createElement('label');
+                labelStart.textContent = `Round ${i + 1} Start Date`;
+                labelStart.setAttribute('for', `RoundStartDates_${i}`);
+                divStart.appendChild(labelStart);
+
+                const inputStart = document.createElement('input');
+                inputStart.type = 'date';
+                inputStart.name = `RoundStartDates[${i}]`;
+                inputStart.id = `RoundStartDates_${i}`;
+                inputStart.classList.add('form-control');
+                divStart.appendChild(inputStart);
+
+                container.appendChild(divStart);
+
+                const divEnd = document.createElement('div');
+                divEnd.classList.add('form-group');
+
+                const labelEnd = document.createElement('label');
+                labelEnd.textContent = `Round ${i + 1} End Date`;
+                labelEnd.setAttribute('for', `RoundEndDates_${i}`);
+                divEnd.appendChild(labelEnd);
+
+                const inputEnd = document.createElement('input');
+                inputEnd.type = 'date';
+                inputEnd.name = `RoundEndDates[${i}]`;
+                inputEnd.id = `RoundEndDates_${i}`;
+                inputEnd.classList.add('form-control');
+                divEnd.appendChild(inputEnd);
+
+                container.appendChild(divEnd);
+            }
+        });
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

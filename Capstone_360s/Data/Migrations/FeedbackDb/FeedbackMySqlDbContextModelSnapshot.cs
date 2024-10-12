@@ -37,6 +37,9 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<string>("GDFileId")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("OriginalResponseId")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("char(36)");
 
@@ -52,9 +55,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("TeamId")
-                        .HasColumnType("char(36)");
-
                     b.Property<int>("TimeframeId")
                         .HasColumnType("int");
 
@@ -67,8 +67,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.HasIndex("ReviewerId");
 
                     b.HasIndex("RoundId");
-
-                    b.HasIndex("TeamId");
 
                     b.HasIndex("TimeframeId");
 
@@ -104,6 +102,9 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("OriginalMetricId")
+                        .HasColumnType("longtext");
 
                     b.Property<int?>("Weight")
                         .HasColumnType("int");
@@ -163,13 +164,18 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasColumnType("varchar(100)");
 
                     b.Property<string>("GDFolderId")
-                        .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
+
+                    b.Property<int>("NoOfMembers")
+                        .HasColumnType("int");
 
                     b.Property<int>("NoOfRounds")
                         .HasColumnType("int");
@@ -177,10 +183,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("POCId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("TeamId")
+                    b.Property<Guid?>("POCId")
                         .HasColumnType("char(36)");
 
                     b.Property<int>("TimeframeId")
@@ -188,13 +191,15 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("ManagerId");
+
+                    b.HasIndex("Name");
 
                     b.HasIndex("POCId");
 
-                    b.HasIndex("TeamId");
-
                     b.HasIndex("TimeframeId");
+
+                    b.HasIndex("OrganizationId", "TimeframeId");
 
                     b.ToTable("projects");
                 });
@@ -207,8 +212,14 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<int>("RoundId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("GDFolderId")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ReleaseDate")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("ProjectId", "RoundId");
 
@@ -225,11 +236,19 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Example")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("OriginalQuestionId")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Q")
                         .IsRequired()
@@ -280,28 +299,19 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.ToTable("rounds");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Team", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<Guid>("ProjectId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("ManagerId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                    b.HasKey("ProjectId", "UserId");
 
-                    b.Property<int>("NoOfMembers")
-                        .HasColumnType("int");
+                    b.HasIndex("UserId");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("ManagerId");
-
-                    b.ToTable("teams");
+                    b.ToTable("teammembers");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Timeframe", b =>
@@ -327,6 +337,9 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasColumnType("varchar(100)");
 
                     b.Property<int>("NoOfProjects")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoOfRounds")
                         .HasColumnType("int");
 
                     b.Property<Guid>("OrganizationId")
@@ -374,6 +387,8 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email");
+
                     b.HasIndex("OrganizationId");
 
                     b.ToTable("users");
@@ -405,12 +420,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.Team", "Team")
-                        .WithMany()
-                        .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Timeframe", "Timeframe")
                         .WithMany()
                         .HasForeignKey("TimeframeId")
@@ -424,8 +433,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Navigation("Reviewer");
 
                     b.Navigation("Round");
-
-                    b.Navigation("Team");
 
                     b.Navigation("Timeframe");
                 });
@@ -462,6 +469,10 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Project", b =>
                 {
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerId");
+
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
@@ -470,15 +481,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasOne("Capstone_360s.Models.FeedbackDb.User", "POC")
                         .WithMany()
-                        .HasForeignKey("POCId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.Team", "Team")
-                        .WithMany()
-                        .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("POCId");
 
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Timeframe", "Timeframe")
                         .WithMany()
@@ -486,11 +489,11 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Manager");
+
                     b.Navigation("Organization");
 
                     b.Navigation("POC");
-
-                    b.Navigation("Team");
 
                     b.Navigation("Timeframe");
                 });
@@ -544,13 +547,23 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Team", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
                 {
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.User", "Manager")
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.Project", "Project")
                         .WithMany()
-                        .HasForeignKey("ManagerId");
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("Manager");
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Timeframe", b =>

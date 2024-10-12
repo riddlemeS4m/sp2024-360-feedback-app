@@ -243,7 +243,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.ToTable("rounds");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Team", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

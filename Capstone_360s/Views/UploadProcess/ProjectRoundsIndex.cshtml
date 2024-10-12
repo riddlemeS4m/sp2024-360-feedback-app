@@ -1,0 +1,65 @@
+﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.ProjectRound>
+
+@{
+    ViewData["Title"] = "Project Rounds";
+
+    var projectId = Context.Request.Query["projectId"].ToString();
+}
+
+<h1>Project Rounds</h1>
+<p>
+    <a class="btn btn-primary" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ProjectId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RoundId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Round.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.GDFolderId)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr >
+                <td>
+                    @Html.DisplayFor(modelItem => item.ProjectId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RoundId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Round.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.GDFolderId)
+                </td>
+                <td>
+                    <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@* <p>
+    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-projectId="@projectId">Back</a>
+</p> *@
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+

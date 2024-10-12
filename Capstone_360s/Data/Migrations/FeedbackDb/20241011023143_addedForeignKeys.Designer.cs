@@ -274,7 +274,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.ToTable("rounds");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Team", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -396,7 +396,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.Team", "Team")
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.TeamMember", "TeamMember")
                         .WithMany()
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -416,7 +416,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.Navigation("Round");
 
-                    b.Navigation("Team");
+                    b.Navigation("TeamMember");
 
                     b.Navigation("Timeframe");
                 });
@@ -454,7 +454,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.Team", "Team")
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.TeamMember", "TeamMember")
                         .WithMany()
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -470,7 +470,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.Navigation("POC");
 
-                    b.Navigation("Team");
+                    b.Navigation("TeamMember");
 
                     b.Navigation("Timeframe");
                 });
@@ -513,7 +513,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Team", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
                 {
                     b.HasOne("Capstone_360s.Models.FeedbackDb.User", "Manager")
                         .WithMany()

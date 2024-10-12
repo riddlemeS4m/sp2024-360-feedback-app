@@ -28,22 +28,23 @@ namespace Capstone_360s.Models.FeedbackDb
         [ForeignKey(nameof(TimeframeId))]
         public Timeframe Timeframe { get; set; }
 
-        [Required]
-        public Guid POCId { get; set; }
+        public Guid? POCId { get; set; }
 
         [ForeignKey(nameof(POCId))]
-        public User POC { get; set; }
+        public User? POC { get; set; }
 
-        [Required]
-        public Guid TeamId { get; set; }
-
-        [ForeignKey(nameof(TeamId))]
-        public Team Team { get; set; }
-
-        public string GDFolderId { get; set; }
+        public string? GDFolderId { get; set; }
 
         [Required]
         public int NoOfRounds { get; set; }
+
+        public Guid? ManagerId { get; set; }
+
+        [ForeignKey(nameof(ManagerId))]
+        public User? Manager { get; set; }
+
+        [Required]
+        public int NoOfMembers { get; set; }
 
         [NotMapped]
         public List<Round> Rounds { get; set; }
@@ -51,9 +52,12 @@ namespace Capstone_360s.Models.FeedbackDb
         [NotMapped]
         public List<ProjectRound> ProjectRounds { get; set; }
 
+        [NotMapped]
+        public List<TeamMember> TeamMembers { get; set; }
+
         public override string ToString()
         {
-            return $"{nameof(Project)}: Id = {Id}, Name = {Name}, Description = {Description}, OrganizationId = {OrganizationId}, TimeframeId = {TimeframeId}, POCId = {POCId}, TeamId = {TeamId}, GDFolderId = {GDFolderId}, NoOfRounds = {NoOfRounds}";
+            return $"{nameof(Project)}: Id = {Id}, Name = {Name}, Description = {Description}, OrganizationId = {OrganizationId}, TimeframeId = {TimeframeId}, POCId = {POCId}, GDFolderId = {GDFolderId}, NoOfRounds = {NoOfRounds}";
         }
     }
 }

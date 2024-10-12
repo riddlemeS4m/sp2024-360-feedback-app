@@ -38,12 +38,6 @@ namespace Capstone_360s.Models.FeedbackDb
 
         public Round Round { get; set;}
 
-        public Guid TeamId { get; set;}
-
-        [ForeignKey(nameof(TeamId))]
-
-        public Team Team { get; set;}
-
         public int TimeframeId { get; set; }
 
         [ForeignKey(nameof(TimeframeId))]
@@ -59,6 +53,7 @@ namespace Capstone_360s.Models.FeedbackDb
         public int? DurationSeconds { get; set;}
 
         public string? GDFileId { get; set; }
+        public string? OriginalResponseId { get; set; }
 
         [NotMapped]
         public List<Metric> Metrics { get; set;}
@@ -74,7 +69,7 @@ namespace Capstone_360s.Models.FeedbackDb
 
         public override string ToString()
         {
-            return $"{nameof(Feedback)}: Id = {Id}, ReviewerId = {ReviewerId}, RevieweeId = {RevieweeId}, ProjectId = {ProjectId}, RoundId = {RoundId}, TeamId = {TeamId}, TimeframeId = {TimeframeId}, StartTime = {StartTime}, EndTime = {EndTime}, DurationSeconds = {DurationSeconds}, GDFileId = {GDFileId}";
+            return $"{nameof(Feedback)}: Id = {Id}, ReviewerId = {ReviewerId}, RevieweeId = {RevieweeId}, ProjectId = {ProjectId}, RoundId = {RoundId}, TimeframeId = {TimeframeId}, StartTime = {StartTime}, EndTime = {EndTime}, DurationSeconds = {DurationSeconds}, GDFileId = {GDFileId}";
         }
     }
 }

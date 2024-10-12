@@ -16,7 +16,8 @@ namespace Capstone_360s.Models.FeedbackDb
 
         [Required]
         [StringLength(255)]
-        public string Example { get;}
+        public string Example { get; set; }
+        public string? OriginalQuestionId { get; set; }
 
         public Guid OrganizationId { get; set; }
 

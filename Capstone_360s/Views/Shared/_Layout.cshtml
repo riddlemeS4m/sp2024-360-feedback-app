@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Capstone_360s.styles.css" asp-append-version="true" />
+
+    <!-- Data Tables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.2/css/jquery.dataTables.min.css" integrity="sha384-nlqJt7hgTYzEtpwtccFUVNZPXLN4pJoZ/QIfCtAIK9txm0dVyw/lz/47SslwYLPj" crossorigin="anonymous">
+
+    <style>
+        tr:hover {
+            cursor: pointer;
+            background-color: #f0f0f0; /* Optional: highlight row on hover */
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -52,6 +62,12 @@
     <!-- Data Tables -->
     <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.js" integrity="sha384-apERv/vfl/R6zmx+HUeBeGTjYRpHuiF1JRYCuBd9KhRME4NTtll1FkO+CelUWYgp" crossorigin="anonymous"></script>
 
+    <script type="text/javascript">
+        //Add datatables formatting to all tables
+        $(document).ready(function () {
+            $('.table').DataTable();
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

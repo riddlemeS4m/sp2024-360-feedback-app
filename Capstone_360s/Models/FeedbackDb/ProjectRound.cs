@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Capstone_360s.Models.FeedbackDb
@@ -16,6 +17,14 @@ namespace Capstone_360s.Models.FeedbackDb
 
         [ForeignKey(nameof(RoundId))]
         public Round Round { get; set;}
+
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? ReleaseDate { get; set; }
+
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? DueDate { get; set; }
 
         public string? GDFolderId { get; set;}
 

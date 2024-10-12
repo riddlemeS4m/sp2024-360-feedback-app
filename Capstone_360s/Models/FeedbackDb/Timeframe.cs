@@ -33,6 +33,9 @@ namespace Capstone_360s.Models.FeedbackDb
         [Required]
         public int NoOfProjects { get; set; }
 
+        [Required]
+        public int NoOfRounds { get; set; }
+
         [DefaultValue(false)]
         public bool IsArchived { get; set; }
 

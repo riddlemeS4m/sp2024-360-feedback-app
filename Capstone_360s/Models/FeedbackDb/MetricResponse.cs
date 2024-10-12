@@ -11,13 +11,11 @@ namespace Capstone_360s.Models.FeedbackDb
         public int MetricId { get; set; }
 
         [ForeignKey(nameof(MetricId))]
-
         public Metric Metric { get; set; }
 
         public Guid FeedbackId { get; set; }
 
         [ForeignKey(nameof(FeedbackId))]
-
         public Feedback Feedback { get; set; }
 
         [Required]

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Capstone_360s.Data.Migrations.FeedbackDb
 {
     [DbContext(typeof(FeedbackMySqlDbContext))]
-    [Migration("20241011052852_changedGDFolderIds")]
-    partial class changedGDFolderIds
+    [Migration("20241011161124_tweakedProject")]
+    partial class tweakedProject
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -166,7 +166,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasColumnType("varchar(100)");
 
                     b.Property<string>("GDFolderId")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Name")
@@ -180,10 +179,10 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("POCId")
+                    b.Property<Guid?>("POCId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("TeamId")
+                    b.Property<Guid?>("TeamId")
                         .HasColumnType("char(36)");
 
                     b.Property<int>("TimeframeId")
@@ -473,15 +472,11 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasOne("Capstone_360s.Models.FeedbackDb.User", "POC")
                         .WithMany()
-                        .HasForeignKey("POCId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("POCId");
 
                     b.HasOne("Capstone_360s.Models.FeedbackDb.TeamMember", "TeamMember")
                         .WithMany()
-                        .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("TeamId");
 
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Timeframe", "Timeframe")
                         .WithMany()

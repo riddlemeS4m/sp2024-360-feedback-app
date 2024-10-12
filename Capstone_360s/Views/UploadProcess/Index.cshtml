@@ -4,11 +4,10 @@
     ViewData["Title"] = "Upload 360s";
 }
 
-<h1>Generate 360s</h1>
-<h3>Upload Process</h3>
+<h1>Organizations</h1>
 
 <p>
-    <a asp-action="OrganizationCreate">Create New</a>
+    <a class="btn btn-primary" asp-action="OrganizationCreate">Create New Organization</a>
 </p>
 <table class="table">
     <thead>
@@ -28,7 +27,7 @@
     <tbody>
         @foreach (var item in Model)
         {
-            <tr>
+            <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", new { id = item.Id })')">
                 <td>
                     @Html.DisplayFor(modelItem => item.Id)
                 </td>
@@ -45,4 +44,17 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+
+    <script>
+        function navigateToSelect(url) {
+            window.location.href = url;
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
 

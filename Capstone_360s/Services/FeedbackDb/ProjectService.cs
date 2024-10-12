@@ -17,8 +17,17 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger.LogInformation("Getting projects by organization id and timeframe id...");
 
             var organizationIdToGuid = Guid.Parse(organizationId);
-            var projects = await _dbSet.Where(p => p.OrganizationId == organizationIdToGuid && p.TimeframeId == timeframeId).ToListAsync();
+            var projects = await _dbSet.Include(x => x.Timeframe).Where(p => p.OrganizationId == organizationIdToGuid && p.TimeframeId == timeframeId).ToListAsync();
             return projects;
+        }
+
+        public async Task<Dictionary<string, Guid>> GetProjectsDictionaryByTimeframeId(string organizationId, int timeframeId)
+        {
+            _logger.LogInformation("Getting projects dictionary by organization id and timeframe id...");
+
+            var projects = await GetProjectsByTimeframeId(organizationId, timeframeId);
+            var projectsDictionary = projects.ToDictionary(p => p.Name, p => p.Id);
+            return projectsDictionary;
         }
     }
 }

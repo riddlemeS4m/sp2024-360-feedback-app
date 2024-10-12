@@ -1,6 +1,7 @@
 using Capstone_360s.Data.Contexts;
 using Capstone_360s.Interfaces.IDbContext;
 using Capstone_360s.Interfaces.IService;
+using Capstone_360s.Services.CSV;
 using Capstone_360s.Services.FeedbackDb;
 using Capstone_360s.Services.GoogleDrive;
 using Capstone_360s.Utilities;
@@ -97,12 +98,18 @@ namespace Capstone_360s
             builder.Services.AddScoped(ServiceFactory.CreateService<RoundService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<ProjectRoundService>);
 
-            builder.Services.AddScoped<IGoogleDrive>(serviceProvider =>
+            builder.Services.AddScoped<IGoogleDrive, GoogleDriveService>(serviceProvider =>
             {
                 var driveService = serviceProvider.GetRequiredService<DriveService>();
                 var cacheService = serviceProvider.GetRequiredService<IMemoryCache>();
                 var logger = serviceProvider.GetRequiredService<ILogger<GoogleDriveService>>();
                 return new GoogleDriveService(driveService, cacheService, logger);
+            });
+
+            builder.Services.AddScoped<CsvService>(serviceProvider =>
+            {
+                var logger = serviceProvider.GetRequiredService<ILogger<CsvService>>();
+                return new CsvService(logger);
             });
 
             builder.Services.AddControllersWithViews();

@@ -15,7 +15,7 @@ namespace Capstone_360s.Interfaces.IDbContext
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectRound> ProjectRounds { get; set; }
         public DbSet<Round> Rounds { get; set; }
-        public DbSet<Team> Teams { get; set; }
+        public DbSet<TeamMember> Teams { get; set; }
         public DbSet<Timeframe> Timeframes { get; set; }
         public DbSet<User> Users { get; set; }
 

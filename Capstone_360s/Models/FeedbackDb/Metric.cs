@@ -25,6 +25,7 @@ namespace Capstone_360s.Models.FeedbackDb
         public int MaxValue { get; set; }
 
         public int? Weight { get; set; }
+        public string? OriginalMetricId { get; set; }
 
         public Guid OrganizationId { get; set; }
 

@@ -1,16 +1,20 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Timeframe>
+﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
 
 @{
-    ViewData["Title"] = "Timeframes";
+    ViewData["Title"] = "Projects";
 
-    var organizationId = (string)ViewContext.RouteData.Values["id"];
+    var organizationId = Context.Request.Query["organizationId"].ToString();
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
 }
 
-<h1>Timeframes</h1>
+<h1>Projects</h1>
 
 <p>
-    <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create New</a>
+    <a class="btn btn-primary" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
+    <a class="btn btn-secondary" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
+    <a class="btn btn-warning" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Capstone Roster</a>
 </p>
+
 <table class="table">
     <thead>
         <tr>
@@ -29,7 +33,7 @@
     <tbody>
         @foreach (var item in Model)
         {
-            <tr onclick="navigateToSelect('@Url.Action("ProjectsIndex", new { organizationId = organizationId, timeframeId = item.Id })')">
+            <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { projectId = item.Id })')">
                 <td>
                     @Html.DisplayFor(modelItem => item.Id)
                 </td>
@@ -40,14 +44,14 @@
                     @Html.DisplayFor(modelItem => item.GDFolderId)
                 </td>
                 <td>
-                    <a asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">Select</a>
+                    <a asp-action="ProjectRoundsIndex" asp-route-projectId="@item.Id">Select</a>
                 </td>
             </tr>
         }
     </tbody>
 </table>
 <p>
-    <a class="btn btn-primary" asp-action="Index">Back</a>
+    <a class="btn btn-primary" asp-action="TimeframesIndex" asp-route-id="@organizationId">Back</a>
 </p>
 
 

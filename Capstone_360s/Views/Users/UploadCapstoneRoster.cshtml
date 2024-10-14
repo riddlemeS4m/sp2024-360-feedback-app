@@ -1,0 +1,44 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = "Upload Qualtrics Data";
+
+    var organizationId = Context.Request.Query["organizationId"].ToString();
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
+}
+
+<h1>Qualtrics Data Upload</h1>
+<hr />
+<div class="row">
+    <div class="col-md-10">
+        <form id="profile-form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="organizationId" value="@organizationId" />
+            <input type="hidden" name="timeframeId" value="@timeframeId" />
+            <div class="form-group">
+                <label for="roster">Upload current Qualtrics data to automatically generate student feedback PDFs.</label>
+                <br>
+                <input type="file"
+                       accept=".csv"
+                       for="roster"
+                       class="form-control-file"
+                       name="roster"
+                       maxlength="2097152"
+                >
+@*              <span validation-for="file" class="text-danger"></span>
+                *@
+            </div>
+            <div class="form-group">
+                <label for="roundId" class="control-label">What round number is this?</label>
+                <input type="number" for="roundId" name="roundId" min="1" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="filterDate" class="control-label">When was this round released?</label>
+                <input type="date" for="filterDate" name="filterDate" class="form-control" />
+                @* <span validation-for="filterDate" class="text-danger"></span> *@
+            </div>
+            <br />
+            <button id="update-profile-button" type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</div>

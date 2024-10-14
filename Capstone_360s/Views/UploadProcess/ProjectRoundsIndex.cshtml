@@ -1,0 +1,74 @@
+﻿@using Capstone_360s.Models.FeedbackDb
+
+@model Capstone_360s.Models.VMs.ProjectRoundsIndexVM
+
+@{
+    ViewData["Title"] = "Project Rounds";
+
+    var projectId = Context.Request.Query["projectId"].ToString();
+}
+
+<h1>Project Rounds</h1>
+<p>
+    <a class="btn btn-primary" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @nameof(ProjectRound.ProjectId)
+            </th>
+            <th>
+                @nameof(ProjectRound.RoundId)
+            </th>
+            <th>
+                @nameof(ProjectRound.Round.Name)
+            </th>
+            <th>
+                @nameof(ProjectRound.GDFolderId)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.ProjectRounds)
+        {
+@*             <tr onclick="navigateToSelect('@Url.Action("FeedbackIndex", new { projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
+ *@         <tr>   
+                <td>
+                    @Html.DisplayFor(modelItem => item.ProjectId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RoundId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Round.Name)
+                </td>
+                <td>
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                </td>
+                <td>
+@*                     <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-timeframeId="@Model.TimeframeId" asp-route-roundId="@item.RoundId">Select</a>
+ *@                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<p>
+    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
+</p>
+
+
+@section Scripts {
+    <script>
+        function navigateToSelect(url) {
+            window.location.href = url;
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+

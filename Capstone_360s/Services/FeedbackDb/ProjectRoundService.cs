@@ -20,5 +20,17 @@ namespace Capstone_360s.Services.FeedbackDb
             var projectRounds = await _dbSet.Include(x => x.Round).Include(x => x.Project).Where(pr => pr.ProjectId == projectIdToGuid).ToListAsync();
             return projectRounds;
         }
+
+        public async Task<IEnumerable<ProjectRound>> GetProjectRoundsByListOfProjectIdsAndRoundId(List<Guid> projectIds, int roundId)
+        {
+            _logger.LogInformation("Getting project rounds by list of project ids...");
+
+            var projectRounds = await _dbSet.Include(x => x.Round)
+                .Include(x => x.Project)
+                .Where(pr => projectIds.Contains(pr.ProjectId) && pr.RoundId == roundId)
+                .ToListAsync();
+
+            return projectRounds;
+        }
     }
 }

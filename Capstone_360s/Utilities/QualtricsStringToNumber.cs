@@ -7,7 +7,8 @@
             { "Excellent", 5 },
             { "Very Good", 4 },
             { "Satisfactory", 3 },
-            { "Fair", 2 }
+            { "Fair", 2 },
+            { "Poor", 1 }
         };
 
         public static int Convert(string qualtricsString)
@@ -18,7 +19,7 @@
             } 
             else
             {
-                return 1;
+                return 0;
             }
         }
     }

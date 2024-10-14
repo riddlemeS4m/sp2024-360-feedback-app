@@ -16,7 +16,7 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             _logger.LogInformation($"Getting first {n} rounds...");
 
-            var rounds = await _dbSet.Take(n).ToListAsync();
+            var rounds = await _dbSet.OrderBy(x => x.Id).Take(n).ToListAsync();
             return rounds;
         }
     }

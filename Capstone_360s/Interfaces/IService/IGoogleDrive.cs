@@ -10,6 +10,7 @@
         public Task<(Google.Apis.Drive.v3.Data.File, MemoryStream)> GetOneFile(string fileId, bool download);
         //public Task<(MemoryStream, Google.Apis.Drive.v3.Data.File)> DownloadFile(string fileId);
         public Task<string> UploadFile(IFormFile file, string folderId);
+        public Task<string> UploadFile(byte[] file, string folderId, string fileName);
         public Task DeleteFile(string fileId);
     }
 }

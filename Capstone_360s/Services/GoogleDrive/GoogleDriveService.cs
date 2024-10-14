@@ -235,6 +235,44 @@ namespace Capstone_360s.Services.GoogleDrive
             }
         }
 
+        // upload file as byte array
+        public async Task<string> UploadFile(byte[] file, string fileName, string folderId)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            var fileMetaData = new Google.Apis.Drive.v3.Data.File()
+            {
+                Name = fileName,
+                Parents = new List<string> { folderId },
+                MimeType = "application/octet-stream"
+            };
+
+            using var fileStream = new MemoryStream(file);
+
+            FilesResource.CreateMediaUpload request = _driveClient.Files.Create(fileMetaData, fileStream, fileMetaData.MimeType);
+
+            request.ProgressChanged += GoogleDriveUtility.Upload_ProgressChanged;
+
+            var result = await request.UploadAsync();
+
+            if (result.Status != UploadStatus.Completed)
+            {
+                throw new Exception("Upload to Google Drive folder failed.");
+            }
+            else
+            {
+                var fileId = request.ResponseBody.Id;
+                _logger.LogInformation("Upload to Google Drive succeeded.");
+
+                await MakeFilePublicAsync(fileId);
+
+                return fileId;
+            }
+        }
+
         public async Task DeleteFile(string fileId)
         {
             if (string.IsNullOrEmpty(fileId))

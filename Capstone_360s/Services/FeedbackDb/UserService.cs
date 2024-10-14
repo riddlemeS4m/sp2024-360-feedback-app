@@ -16,5 +16,10 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             return await _dbSet.Where(x => x.OrganizationId == organizationId).ToListAsync();
         }
+
+        public async Task<IEnumerable<User>> GetUsersByListOfEmails(List<string> emails)
+        {
+            return await _dbSet.Where(x => emails.Contains(x.Email)).ToListAsync();
+        }
     }
 }

@@ -1,11 +1,11 @@
-﻿using Capstone_360s.Models.Roster;
+﻿using Capstone_360s.Models.CapstoneRoster;
 using CsvHelper.Configuration;
 
 namespace Capstone_360s.Utilities
 {
-    public class SurveyResponseMap : ClassMap<Qualtrics>
+    public class CapstoneMapCsvToQualtrics : ClassMap<Qualtrics>
     {
-        public SurveyResponseMap()
+        public CapstoneMapCsvToQualtrics()
         {
             // Metadata about the response
             Map(m => m.StartDate).Name("StartDate");

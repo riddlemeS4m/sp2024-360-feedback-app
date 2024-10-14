@@ -1,6 +1,8 @@
-﻿namespace Capstone_360s.Models.Roster
+﻿using Capstone_360s.Models.Survey;
+
+namespace Capstone_360s.Models.CapstoneRoster
 {
-    public class Qualtrics
+    public class Qualtrics : GenericSurvey
     {
         // Metadata about the response
         public DateTime? StartDate { get; set; }

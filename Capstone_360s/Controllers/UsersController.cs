@@ -1,4 +1,6 @@
-﻿using Capstone_360s.Interfaces.IService;
+﻿using Capstone_360s.Data.Constants;
+using Capstone_360s.Interfaces.IService;
+using Capstone_360s.Models.CapstoneRoster;
 using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Services.CSV;
 using Capstone_360s.Services.FeedbackDb;
@@ -9,10 +11,11 @@ namespace Capstone_360s.Controllers
 {
     public class UsersController : Controller
     {
-        private readonly CsvService _csvService;
+        private readonly CapstoneCsvService _capstoneCsvService;
         private readonly IGoogleDrive _googleDriveService;
         private readonly UserService _userService;
         private readonly ProjectService _projectService;
+        private readonly ProjectRoundService _projectRoundService;
         private readonly TeamService _teamService;
         private readonly TimeframeService _timeframeService;
         private readonly MetricService _metricService;
@@ -22,10 +25,11 @@ namespace Capstone_360s.Controllers
         private readonly QuestionResponseService _questionResponseService;
         private readonly RoundService _roundService;
         private readonly ILogger<UsersController> _logger;
-        public UsersController(CsvService csvService, 
+        public UsersController(CapstoneCsvService csvService, 
             IGoogleDrive googleDriveService,
             UserService userService,
             ProjectService projectService,
+            ProjectRoundService projectRoundService,
             TeamService teamService,
             TimeframeService timeframeService,
             MetricService metricService,
@@ -36,10 +40,11 @@ namespace Capstone_360s.Controllers
             RoundService roundService,
             ILogger<UsersController> logger)
         {
-            _csvService = csvService;
+            _capstoneCsvService = csvService;
             _googleDriveService = googleDriveService;
             _userService = userService;
             _projectService = projectService;
+            _projectRoundService = projectRoundService;
             _teamService = teamService;
             _timeframeService = timeframeService;
             _metricService = metricService;
@@ -77,14 +82,15 @@ namespace Capstone_360s.Controllers
 
             var round = await _roundService.GetByIdAsync(roundId);
 
-            if(round == null)
+            if(round == null || roundId > timeframe.NoOfRounds)
             {
                 return View();
             }
 
-            var data = _csvService.ReadCapstoneSurveyResponses(roster, filterDate).ToList();
+            // filter date parameter not working quite right yet
+            var data = _capstoneCsvService.ReadSurveyResponsesWithFilterDate(roster, Capstone.ExpectedHeaders, nameof(Qualtrics.StartDate), filterDate, Capstone.CustomDateFilter).ToList();
 
-            if(data.Count() == 0)
+            if(data.Count == 0)
             {
                 _logger.LogInformation($"{data.Count} rows were read and mapped, returning to home screen...");
                 return RedirectToAction(nameof(UploadProcessController.Index), "UploadProcess");
@@ -92,8 +98,8 @@ namespace Capstone_360s.Controllers
 
             // check that all metrics are in the database, and add ones that aren't
             var metrics = await _metricService.GetMetricsByOrganizationId(organizationId);
-            var metricsToAdd = _csvService.CapstoneMetrics.Where(x => !metrics.Any(y => y.OriginalMetricId == x));
-            var defaultMetrics = _csvService.GetDefaultCapstoneMetrics(organizationId);
+            var metricsToAdd = Capstone.CapstoneMetrics.Where(x => !metrics.Any(y => y.OriginalMetricId == x));
+            var defaultMetrics = Capstone.GetDefaultCapstoneMetrics(organizationId);
 
             if (metricsToAdd.Any())
             {
@@ -103,14 +109,14 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            defaultMetrics = await _metricService.GetDefaultCapstoneMetrics(organizationId, _csvService.CapstoneMetrics.ToList());
+            defaultMetrics = await _metricService.GetDefaultCapstoneMetrics(organizationId, Capstone.CapstoneMetrics.ToList());
 
             metrics = await _metricService.GetMetricsByOrganizationId(organizationId);
 
             // check that all questions are in the database, and add ones that aren't
             var questions = await _questionService.GetQuestionsByOrganizationId(organizationId);
-            var questionsToAdd = _csvService.CapstoneQuestions.Where(x => !questions.Any(y => y.OriginalQuestionId == x));
-            var defaultQuestions = _csvService.GetDefaultCapstoneQuestions(organizationId);
+            var questionsToAdd = Capstone.CapstoneQuestions.Where(x => !questions.Any(y => y.OriginalQuestionId == x));
+            var defaultQuestions = Capstone.GetDefaultCapstoneQuestions(organizationId);
 
             if (questionsToAdd.Any())
             {
@@ -120,7 +126,7 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            defaultQuestions = await _questionService.GetDefaultCapstoneQuestions(organizationId, _csvService.CapstoneQuestions.Take(3).ToList());
+            defaultQuestions = await _questionService.GetDefaultCapstoneQuestions(organizationId, Capstone.CapstoneQuestions.Take(3).ToList());
 
             // check that all users in the roster are in the database, and add ones that aren't
             var users = await _userService.GetUsersByOrganizationId(organizationId);
@@ -195,9 +201,31 @@ namespace Capstone_360s.Controllers
 
             await _teamService.AddRange(teamMembersToAdd);
 
+            // check that each project has a child folder for each round, otherwise create child folder and project round object
+            var projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projects.Select(x => x.Id).ToList(), roundId);
+            var projectRoundsDict = projectRounds.ToDictionary(x => x.ProjectId, x => x.RoundId);
+            var projectRoundsToAdd = new List<ProjectRound>();
+
+            foreach(var project in projects)
+            {
+                if(!projectRoundsDict.ContainsKey(project.Id))
+                {
+                    var roundFolderId = await _googleDriveService.CreateFolderAsync("Round " + roundId, project.GDFolderId);
+                    projectRoundsToAdd.Add(new ProjectRound
+                    {
+                        ProjectId = project.Id,
+                        RoundId = roundId,
+                        GDFolderId = roundFolderId
+                    });
+                }
+            }
+
+            await _projectRoundService.AddRange(projectRoundsToAdd);
+
             // finally, iterate through project.members map each teammember to a new feedback object
             projects = await _projectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
             teamMembers = await _teamService.GetTeamMembersByListOfProjectIds(projects.Select(x => x.Id).ToList());
+            //projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projects.Select(x => x.Id).ToList(), roundId);
 
             var feedback = new List<Feedback>();
             var metricResponses = new List<MetricResponse>();
@@ -209,214 +237,97 @@ namespace Capstone_360s.Controllers
             {
                 var project = projects.ElementAt(i);
                 var rows = data.Where(x => x.TeamName == project.Name);
+                
+                // work on this...this is where the program decides what to do if not everybody has submitted
+                if(rows == null)
+                {
+                    throw new Exception("The wrong number of projects is preventing the report from being run.");
+                    
+                    for (int o = 0; o < project.NoOfMembers; i++)
+                    {
+                        rows = rows.Append(new Qualtrics());
+                    }
+                }
+
                 if(rows.Count() != project.NoOfMembers)
                 {
                     throw new Exception("The wrong number of projects is preventing the report from being run.");
+
+                    for (int o = 0; o < project.NoOfMembers - rows.Count(); i++)
+                    {
+                        rows = rows.Append(new Qualtrics());
+                    }
                 }
 
-                for(int j = 0; j < project.NoOfMembers; j++)
+                for (int j = 0; j < project.NoOfMembers; j++)
                 {
                     var row = rows.ElementAt(j);
-                    var selfFeedback = new Feedback
-                    {
-                        ReviewerId = userDicts[row.Email],
-                        RevieweeId = userNamesDict[row.FirstName.Trim() + " " + row.LastName.Trim()],
-                        ProjectId = project.Id,
-                        RoundId = roundId,
-                        TimeframeId = timeframeId
-                    };
+
+                    // Self Feedback
+                    var selfFeedback = CreateFeedback(userDicts[row.Email], userNamesDict[row.FirstName.Trim() + " " + row.LastName.Trim()], project.Id, roundId, timeframeId, row.ResponseId);
                     feedback.Add(selfFeedback);
 
-                    metricResponses.AddRange(GenerateAllMetricResponses(selfFeedback, defaultMetrics.ToList(),
+                    AddResponses(selfFeedback,
                     [
                         row.TechnologySelf,
                         row.AnalyticalSelf,
                         row.CommunicationSelf,
                         row.ParticipationSelf,
                         row.PerformanceSelf
-                    ]));
-
-                    questionResponses.AddRange(GenerateAllQuestionResponses(selfFeedback, defaultQuestions.ToList(), 
-                    [ 
+                    ],
+                                    [
                         row.StrengthsSelf,
                         row.GrowthAreasSelf,
                         row.CommentsSelf
-                    ]));
+                    ]);
 
-                    if(!string.IsNullOrEmpty(row.Member1NameConfirmation.Trim()))
+                    // Loop through members 1 to 6
+                    for (int memberIndex = 1; memberIndex <= 6; memberIndex++)
                     {
-                        var feedbackMemberOne = new Feedback
+                        var memberName = (string)typeof(Qualtrics).GetProperty($"Member{memberIndex}NameConfirmation")?.GetValue(row, null);
+                        if (!string.IsNullOrEmpty(memberName?.Trim()))
                         {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member1NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberOne);
+                            var feedbackMember = CreateFeedback(userDicts[row.Email], userNamesDict[memberName.Trim()], project.Id, roundId, timeframeId, row.ResponseId);
+                            feedback.Add(feedbackMember);
 
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberOne, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember1,
-                            row.AnalyticalMember1,
-                            row.CommunicationMember1,
-                            row.ParticipationMember1,
-                            row.PerformanceMember1
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberOne, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember1,
-                            row.GrowthAreasMember1,
-                            row.CommentsMember1
-                        ]));
-                    }                    
-
-                    if(!string.IsNullOrEmpty(row.Member2NameConfirmation.Trim()))
-                    {
-                        var feedbackMemberTwo = new Feedback
-                        {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member2NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberTwo);
-
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberTwo, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember2,
-                            row.AnalyticalMember2,
-                            row.CommunicationMember2,
-                            row.ParticipationMember2,
-                            row.PerformanceMember2
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberTwo, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember2,
-                            row.GrowthAreasMember2,
-                            row.CommentsMember2
-                        ]));
-                    }
-                    
-                    if(!string.IsNullOrEmpty(row.Member3NameConfirmation.Trim()))
-                    {
-                        var feedbackMemberThree = new Feedback
-                        {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member3NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberThree);
-
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberThree, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember3,
-                            row.AnalyticalMember3,
-                            row.CommunicationMember3,
-                            row.ParticipationMember3,
-                            row.PerformanceMember3
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberThree, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember3,
-                            row.GrowthAreasMember3,
-                            row.CommentsMember3
-                        ]));
-                    }
-                    
-                    if(!string.IsNullOrEmpty(row.Member4NameConfirmation.Trim()))
-                    {
-                        var feedbackMemberFour = new Feedback
-                        {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member4NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberFour);
-
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberFour, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember4,
-                            row.AnalyticalMember4,
-                            row.CommunicationMember4,
-                            row.ParticipationMember4,
-                            row.PerformanceMember4
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberFour, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember4,
-                            row.GrowthAreasMember4,
-                            row.CommentsMember4
-                        ]));
-                    }   
-                    
-                    if(!string.IsNullOrEmpty(row.Member5NameConfirmation.Trim()))
-                    {
-                        var feedbackMemberFive = new Feedback
-                        {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member5NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberFive);
-
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberFive, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember5,
-                            row.AnalyticalMember5,
-                            row.CommunicationMember5,
-                            row.ParticipationMember5,
-                            row.PerformanceMember5
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberFive, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember5,
-                            row.GrowthAreasMember5,
-                            row.CommentsMember5
-                        ]));
-                    }
-
-                    if (!string.IsNullOrEmpty(row.Member6NameConfirmation.Trim()))
-                    {
-                        var feedbackMemberSix = new Feedback
-                        {
-                            ReviewerId = userDicts[row.Email],
-                            RevieweeId = userNamesDict[row.Member6NameConfirmation.Trim()],
-                            ProjectId = project.Id,
-                            RoundId = roundId,
-                            TimeframeId = timeframeId
-                        };
-                        feedback.Add(feedbackMemberSix);
-
-                        metricResponses.AddRange(GenerateAllMetricResponses(feedbackMemberSix, defaultMetrics.ToList(),
-                        [
-                            row.TechnologyMember6,
-                            row.AnalyticalMember6,
-                            row.CommunicationMember6,
-                            row.ParticipationMember6,
-                            row.PerformanceMember6
-                        ]));
-
-                        questionResponses.AddRange(GenerateAllQuestionResponses(feedbackMemberSix, defaultQuestions.ToList(),
-                        [
-                            row.StrengthsMember6,
-                            row.GrowthAreasMember6,
-                            row.CommentsMember6
-                        ]));
+                            AddResponses(feedbackMember, new[]
+                            {
+                                (string)typeof(Qualtrics).GetProperty($"TechnologyMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"AnalyticalMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"CommunicationMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"ParticipationMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"PerformanceMember{memberIndex}")?.GetValue(row, null)
+                            }, new[]
+                                            {
+                                (string)typeof(Qualtrics).GetProperty($"StrengthsMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"GrowthAreasMember{memberIndex}")?.GetValue(row, null),
+                                (string)typeof(Qualtrics).GetProperty($"CommentsMember{memberIndex}")?.GetValue(row, null)
+                            });
+                        }
                     }
                 }
+
+                // Helper method to create feedback
+                Feedback CreateFeedback(Guid reviewerId, Guid revieweeId, Guid projectId, int roundId, int timeframeId, string originalResponseId)
+                {
+                    return new Feedback
+                    {
+                        ReviewerId = reviewerId,
+                        RevieweeId = revieweeId,
+                        ProjectId = projectId,
+                        RoundId = roundId,
+                        TimeframeId = timeframeId,
+                        OriginalResponseId = originalResponseId
+                    };
+                }
+
+                // Helper method to add metric and question responses
+                void AddResponses(Feedback feedback, string[] metricValues, string[] questionValues)
+                {
+                    metricResponses.AddRange(GenerateAllMetricResponses(feedback, defaultMetrics.ToList(), metricValues.ToList()));
+                    questionResponses.AddRange(GenerateAllQuestionResponses(feedback, defaultQuestions.ToList(), questionValues.ToList()));
+                }
+
             }
 
             await _feedbackService.AddRange(feedback);
@@ -424,7 +335,8 @@ namespace Capstone_360s.Controllers
             await _questionResponseService.AddRange(questionResponses);
 
             _logger.LogInformation($"{data.Count} rows were read and mapped, returning to home screen...");
-            return RedirectToAction(nameof(UploadProcessController.Index), "UploadProcess");
+            //return RedirectToAction(nameof(UploadProcessController.ProjectRoundCreate), "UploadProcess", new { organizationId = organizationId, timeframeId = timeframeId });
+            return RedirectToAction(nameof(UploadProcessController.CreatePdfs), "UploadProcess", new { timeframeId = timeframeId, roundId = roundId });
         }
 
         public async Task<IActionResult> OrganizationUsersIndex(string organizationId)
@@ -445,7 +357,7 @@ namespace Capstone_360s.Controllers
         private List<QuestionResponse> GenerateAllQuestionResponses(Feedback feedback, List<Question> questions, List<string> responses)
         {
             var list = new List<QuestionResponse>();
-            for(int i = 0; i < questions.Count(); i++)
+            for(int i = 0; i < questions.Count; i++)
             {
                 list.Add(GenerateQuestionResponse(feedback, questions[i].Id, responses[i]));
             }

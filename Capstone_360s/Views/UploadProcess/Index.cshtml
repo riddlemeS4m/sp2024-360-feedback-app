@@ -35,7 +35,7 @@
                     @Html.DisplayFor(modelItem => item.Name)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.GDFolderId)
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                 </td>
                 <td>
                     <a asp-action="TimeframesIndex" asp-route-id="@item.Id">Select</a>

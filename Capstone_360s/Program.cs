@@ -4,6 +4,8 @@ using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Services.CSV;
 using Capstone_360s.Services.FeedbackDb;
 using Capstone_360s.Services.GoogleDrive;
+using Capstone_360s.Services.Maps;
+using Capstone_360s.Services.PDF;
 using Capstone_360s.Utilities;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
@@ -11,7 +13,6 @@ using Google.Apis.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
 
 namespace Capstone_360s
 {
@@ -86,6 +87,7 @@ namespace Capstone_360s
                     options.UseMySql(feedbackConnectionString, ServerVersion.AutoDetect(feedbackConnectionString)));
 
             builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackService>);
+            builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackPdfService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<MetricService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<MetricResponseService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<QuestionService>);
@@ -106,11 +108,38 @@ namespace Capstone_360s
                 return new GoogleDriveService(driveService, cacheService, logger);
             });
 
-            builder.Services.AddScoped<CsvService>(serviceProvider =>
+            builder.Services.AddScoped<CapstoneMapCsvToQualtrics>();
+
+            builder.Services.AddScoped<CapstoneMapToInvertedQualtrics>(serviceProvider =>
             {
-                var logger = serviceProvider.GetRequiredService<ILogger<CsvService>>();
-                return new CsvService(logger);
+                var organizationService = serviceProvider.GetRequiredService<OrganizationService>();
+                var timeframeService = serviceProvider.GetRequiredService<TimeframeService>();
+                var projectService = serviceProvider.GetRequiredService<ProjectService>();
+                var userService = serviceProvider.GetRequiredService<UserService>();
+                var metricResponseService = serviceProvider.GetRequiredService<MetricResponseService>();
+                var questionResponseService = serviceProvider.GetRequiredService<QuestionResponseService>();
+                var logger = serviceProvider.GetRequiredService<ILogger<CapstoneMapToInvertedQualtrics>>();
+                return new CapstoneMapToInvertedQualtrics(organizationService, timeframeService, projectService, userService, metricResponseService, questionResponseService, logger);
             });
+
+            builder.Services.AddScoped<CapstoneCsvService>(serviceProvider =>
+            {
+                var logger = serviceProvider.GetRequiredService<ILogger<CapstoneCsvService>>();
+                var map = serviceProvider.GetRequiredService<CapstoneMapCsvToQualtrics>();
+                return new CapstoneCsvService(map, logger);
+            });
+
+            builder.Services.AddScoped<CapstonePdfService>(serviceProvider =>
+            {
+                var roundService = serviceProvider.GetRequiredService<RoundService>();
+                var userService = serviceProvider.GetRequiredService<UserService>();
+                var feedbackService = serviceProvider.GetRequiredService<FeedbackService>();
+                var invertQualtricsService = serviceProvider.GetRequiredService<CapstoneMapToInvertedQualtrics>();
+                var logger = serviceProvider.GetRequiredService<ILogger<CapstonePdfService>>();
+                return new CapstonePdfService(roundService, feedbackService, userService, invertQualtricsService, logger);
+            });
+
+            
 
             builder.Services.AddControllersWithViews();
 

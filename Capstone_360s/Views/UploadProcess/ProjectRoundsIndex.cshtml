@@ -1,4 +1,6 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.ProjectRound>
+﻿@using Capstone_360s.Models.FeedbackDb
+
+@model Capstone_360s.Models.VMs.ProjectRoundsIndexVM
 
 @{
     ViewData["Title"] = "Project Rounds";
@@ -15,24 +17,25 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.ProjectId)
+                @nameof(ProjectRound.ProjectId)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.RoundId)
+                @nameof(ProjectRound.RoundId)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Round.Name)
+                @nameof(ProjectRound.Round.Name)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.GDFolderId)
+                @nameof(ProjectRound.GDFolderId)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
+        @foreach (var item in Model.ProjectRounds)
         {
-            <tr >
+@*             <tr onclick="navigateToSelect('@Url.Action("FeedbackIndex", new { projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
+ *@         <tr>   
                 <td>
                     @Html.DisplayFor(modelItem => item.ProjectId)
                 </td>
@@ -43,21 +46,27 @@
                     @Html.DisplayFor(modelItem => item.Round.Name)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.GDFolderId)
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                 </td>
                 <td>
-                    <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
-                </td>
+@*                     <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-timeframeId="@Model.TimeframeId" asp-route-roundId="@item.RoundId">Select</a>
+ *@                </td>
             </tr>
         }
     </tbody>
 </table>
-@* <p>
-    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-projectId="@projectId">Back</a>
-</p> *@
+<p>
+    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
+</p>
 
 
 @section Scripts {
+    <script>
+        function navigateToSelect(url) {
+            window.location.href = url;
+        }
+    </script>
+
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }

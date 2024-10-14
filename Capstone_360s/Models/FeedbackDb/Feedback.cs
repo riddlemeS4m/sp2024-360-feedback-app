@@ -43,6 +43,11 @@ namespace Capstone_360s.Models.FeedbackDb
         [ForeignKey(nameof(TimeframeId))]
         public Timeframe Timeframe { get; set;}
 
+        public Guid? FeedbackPdfId { get; set;}
+
+        [ForeignKey(nameof(FeedbackPdfId))]
+        public FeedbackPdf? FeedbackPdf { get; set;}
+
         [DataType(DataType.Time)]
         [DisplayFormat(DataFormatString = "{0:hh:mm tt}", ApplyFormatInEditMode = true)]
         public DateTime? StartTime { get; set;}

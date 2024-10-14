@@ -1,7 +1,10 @@
-﻿using Capstone_360s.Interfaces.IService;
+﻿using Capstone_360s.Data.Constants;
+using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Models.VMs;
 using Capstone_360s.Services.FeedbackDb;
+using Capstone_360s.Services.Maps;
+using Capstone_360s.Services.PDF;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Capstone_360s.Controllers
@@ -16,6 +19,10 @@ namespace Capstone_360s.Controllers
         private readonly ProjectRoundService _projectRoundService;
         private readonly MetricService _metricService;
         private readonly QuestionService _questionService;
+        private readonly FeedbackService _feedbackService;
+        private readonly FeedbackPdfService _feedbackPdfService;
+        private readonly CapstoneMapToInvertedQualtrics _invertQualtricsService;
+        private readonly CapstonePdfService _pdfService;
         private readonly ILogger<UploadProcessController> _logger;
         public UploadProcessController(IGoogleDrive googleDriveService,
             OrganizationService organizationService,
@@ -25,6 +32,10 @@ namespace Capstone_360s.Controllers
             ProjectRoundService projectRoundService,
             MetricService metricService,
             QuestionService questionService,
+            FeedbackService feedbackService,
+            FeedbackPdfService feedbackPdfService,
+            CapstoneMapToInvertedQualtrics invertQualtricsService,
+            CapstonePdfService pdfService,
             ILogger<UploadProcessController> logger) 
         { 
             _googleDriveService = googleDriveService;
@@ -35,6 +46,10 @@ namespace Capstone_360s.Controllers
             _projectRoundService = projectRoundService;
             _metricService = metricService;
             _questionService = questionService;
+            _feedbackService = feedbackService;
+            _feedbackPdfService = feedbackPdfService;
+            _invertQualtricsService = invertQualtricsService;
+            _pdfService = pdfService;
             _logger = logger;
         }
         public async Task<IActionResult> Index()
@@ -286,6 +301,16 @@ namespace Capstone_360s.Controllers
                 throw new Exception("There are no projects or rounds to link.");
             }
 
+            if(projectsList.Select(x => x.NoOfRounds).Distinct().Count() > 1)
+            {
+                throw new Exception("Not every project has the same number of rounds.");
+            }
+
+            if(projectsList.Select(x => x.NoOfRounds).Distinct().FirstOrDefault() != roundsList.Count)
+            {
+                throw new Exception("Not every project has the correct amount of rounds.");
+            }
+
             var projectRounds = new List<ProjectRound>();
             for(int i = 0; i < projectsList.Count; i++)
             {
@@ -294,13 +319,26 @@ namespace Capstone_360s.Controllers
                     var folderName = roundsList[j].Name;
                     var projectRoundFolderId = await _googleDriveService.CreateFolderAsync(folderName, projectsList[i].GDFolderId);
 
+                    DateTime? startDate;
+                    DateTime? endDate;
+
+                    if(RoundStartDates.Count == roundsList.Count)
+                    {
+                        startDate = RoundStartDates[j];
+                    } else { startDate = null; }
+                    
+                    if(RoundEndDates.Count == roundsList.Count)
+                    {
+                        endDate = RoundEndDates[j];
+                    } else { endDate = null; }
+
                     var projectRound = new ProjectRound
                     {
                         ProjectId = projectsList[i].Id,
                         RoundId = roundsList[j].Id,
                         GDFolderId = projectRoundFolderId,
-                        ReleaseDate = RoundStartDates[j],
-                        DueDate = RoundEndDates[j]
+                        ReleaseDate = startDate,
+                        DueDate = endDate
                     };
 
                     projectRounds.Add(projectRound);
@@ -318,13 +356,88 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(ProjectsIndex), new { organizationId = project.OrganizationId, timeframeId = project.TimeframeId });
         }
 
-        public async Task<IActionResult> ProjectRoundsIndex(string projectId)
+        public async Task<IActionResult> ProjectRoundsIndex(string organizationId, int timeframeId, string projectId)
         {
             _logger.LogInformation("Moving to the rounds step...");
             var projectRounds = await _projectRoundService.GetProjectRoundsByProjectId(projectId);
 
+            var vm = new ProjectRoundsIndexVM
+            {
+                ProjectRounds = projectRounds,
+                OrganizationId = organizationId,
+                TimeframeId = timeframeId,
+            };
+
             _logger.LogInformation("Returning rounds selection view...");
-            return View(projectRounds);
+            return View(vm);
+        }
+
+        public async Task<IActionResult> FeedbackIndex(string projectId, int timeframeId, int roundId)
+        {
+            return RedirectToAction(nameof(CreatePdfs), new { timeframeId, roundId });
+        }
+
+        public async Task<IActionResult> CreatePdfs(int timeframeId, int roundId)
+        {
+            _logger.LogInformation("Moving to the create pdfs step...");
+
+            if(timeframeId == 0 || roundId == 0)
+            {
+                return BadRequest();
+            }
+
+            var feedback = await _feedbackService.GetMultipleRoundsOfFeedbackByTimeframeIdAndRoundId(timeframeId, roundId);
+            _logger.LogInformation($"{feedback.Count()} rows of feedback about to be mapped to {feedback.Select(x => x.RevieweeId).Distinct().Count()} recipients...");
+
+            var noOfRoundsList = feedback.Select(x => new { x.ProjectId, x.Project.NoOfMembers }).Distinct().ToList();
+            int sum = 0;
+
+            if(!noOfRoundsList.Any())
+            {
+                throw new Exception("Feedback objects don't have any project information.");
+            }
+
+            foreach (var noOfRound in noOfRoundsList)
+            {
+                var number = noOfRound.NoOfMembers;
+                sum += (number * number);
+            }
+
+            if(sum * roundId != feedback.Count())
+            {
+                throw new Exception("Unexpected number of feedback objects was returned");
+            }
+
+            var invertedQualtrics = await _invertQualtricsService.MapFeedback(feedback, roundId);
+            _logger.LogInformation($"{invertedQualtrics.Count()} feedback objects have now been mapped...");
+
+            if(feedback.Count() != invertedQualtrics.Count())
+            {
+                throw new Exception("Not every feedback object has been mapped.");
+            }
+
+            var pdfs = await _pdfService.GenerateCapstonePdfs(invertedQualtrics, roundId);
+            _logger.LogInformation($"{pdfs.Count()} pdfs have been generated...");
+
+            if(pdfs.Count() != feedback.Select(x => x.RevieweeId).Distinct().Count())
+            {
+                throw new Exception("Not every feedback recipient has a pdf.");
+            }
+
+            var projectIds = pdfs.Select(x => x.ProjectId).Distinct().ToList();
+            var projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projectIds, roundId);
+            var projectRoundsDict = projectRounds.ToDictionary(x => x.ProjectId, x => x.GDFolderId);
+            for(int i = 0; i < pdfs.Count; i++)
+            {
+                pdfs[i].ParentGDFolderId = projectRoundsDict[pdfs[i].ProjectId];
+                var fileId = await _googleDriveService.UploadFile(pdfs[i].Data, pdfs[i].FileName, pdfs[i].ParentGDFolderId);
+                pdfs[i].GDFileId = fileId;
+            }
+
+
+            await _feedbackPdfService.AddRange(pdfs);
+
+            return View(new Project { NoOfRounds = roundId});
         }
     }
 }

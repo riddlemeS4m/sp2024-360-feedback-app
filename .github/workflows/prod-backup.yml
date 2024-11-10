@@ -5,6 +5,7 @@ on:
     workflows: ["360s Feedback App - CI Workflow - Prod"]
     types:
       - completed
+  workflow_dispatch:
 
 jobs:
   backup:

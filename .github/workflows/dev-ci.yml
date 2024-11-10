@@ -17,7 +17,7 @@ jobs:
     - name: Set up .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.x
+        dotnet-version: 8.x
 
     # Step 4: Restore dependencies
     - name: Restore dependencies
@@ -29,31 +29,28 @@ jobs:
     
     # Step 6: Run tests and save results
     - name: Run tests
-      run: dotnet test Capstone_360s/Capstone_360s.sln --logger "trx" --results-directory "TestResults"
+      run: dotnet test Capstone_360s/Capstone_360s.sln --logger "trx" --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
     
-    # Step 7: Upload test results as an artifact
-    - name: Upload test results
+    - name: Combine Coverage Reports # This is because one report is produced per project, and we want one result for all of them.
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+      with:
+        reports: "**/*.cobertura.xml" # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+        targetdir: "${{ github.workspace }}" # REQUIRED # The directory where the generated report should be saved.
+        reporttypes: "Cobertura" # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, Html_Dark, Html_Light, Html_BlueRed, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlInline_AzurePipelines_Light, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MarkdownSummary, MarkdownSummaryGithub, MarkdownDeltaSummary, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, TextDeltaSummary, Xml, XmlSummary
+        verbosity: "Info" # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
+        title: "Code Coverage" # Optional title.
+        tag: "${{ github.run_number }}_${{ github.run_id }}" # Optional tag or build version.
+        customSettings: "" # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
+        toolpath: "reportgeneratortool" # Default directory for installing the dotnet tool.
+    
+    - name: Upload Combined Coverage XML
       uses: actions/upload-artifact@v4
       with:
-        name: TestResults
-        path: TestResults
-    
+        name: coverage
+        path: ${{ github.workspace }}/Cobertura.xml
+        retention-days: 5
+      
     # Step 8: Ensure that the workflow fails if tests don't pass
     - name: Fail if tests fail
       if: failure()
       run: exit 1
-    
-    # Optional Step: Check if .NET version can be updated
-    - name: Check for .NET SDK updates
-      run: |
-        current_version=$(dotnet --list-sdks | grep 6 | awk '{print $1}')
-        echo "Current .NET 6 SDK version: $current_version"
-        
-        latest_version=$(dotnet sdk check | grep 6 | awk 'NR==1{print $3}')
-        echo "Latest available .NET 6 SDK version: $latest_version"
-    
-        if [ "$current_version" != "$latest_version" ]; then
-          echo "##[warning]There is a new .NET 6 SDK update available: $latest_version"
-        else
-          echo "You're already using the latest .NET 6 SDK."
-        fi

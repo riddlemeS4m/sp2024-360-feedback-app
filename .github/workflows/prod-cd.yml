@@ -2,101 +2,78 @@ name: 360s Feedback App - CD Workflow - Prod
 
 on:
   workflow_run:
-    workflows: ["360s Feedback App - CI Workflow - Prod"]
+    workflows: ["360s Feedback App - Database Backup - Prod"]
     types:
       - completed
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+    # Step 1: Check out the code
+    - name: Checkout Code
+      uses: actions/checkout@v4
     
-    # Step 1: SSH into the server (Placeholder)
-    - name: SSH into server
-      run: echo "SSH step placeholder"
+    # Step 2: SSH into the server, stop the service, and run all deployment commands
+    - name: SSH and Deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.DROPLET_IP }}
+        username: webadmin
+        password: ${{ secrets.DROPLET_PASSWORD }}
+        script: |
+          # Stop the Kestrel service
+          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl stop ${{ secrets.KESTREL_SERVICE_NAME }}
 
-    # Step 2: Stop the Kestrel service
-    - name: Stop Kestrel Service
-      run: sudo systemctl stop kestrel-mockinterviews.service
+          # Store the current commit hash before pulling the latest code
+          cd ${{ secrets.PROJECT_DIRECTORY }}
+          git rev-parse HEAD > old_commit.txt
+          old_commit=$(cat old_commit.txt)
 
-    # Step 3: Snapshot the SQL Server database
-    - name: Snapshot SQL Server Database
-      run: |
-        if [ -n "$(git diff --name-only HEAD^1 HEAD | grep 'Data/Migrations/')" ]; then
-          echo "Snapshotting databases before applying migrations..."
-          sqlcmd -S <server_name> -U <username> -P <password> -Q "BACKUP DATABASE [<database_name>] TO DISK = N'/path/to/backup/<database_name>.bak' WITH INIT, FORMAT"
-        fi
+          # Pull the latest code
+          git pull
 
-    # Step 3: Store the current commit before pulling the latest code
-    - name: Store current commit hash
-      run: |
-        cd /path/to/your/project
-        git rev-parse HEAD > old_commit.txt
+          # Restore NuGet packages
+          dotnet restore
 
-    # Step 4: Change to project directory and pull latest code (Placeholder for directory)
-    - name: Pull latest code
-      run: |
-        cd /path/to/your/project
-        git pull
+          # Apply migrations conditionally
+          MIGRATIONS=$(git diff --name-only $old_commit HEAD | grep 'Data/Migrations/FeedbackDb/')
+          if [ -n "$MIGRATIONS" ]; then
+            echo "Applying migrations for FeedbackDbContext"
+            if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}}; then
+              echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
+              git reset --hard $old_commit
+              exit 1
+            fi
+          else
+            echo "No new migrations for FeedbackDbContext"
+          fi
 
-    # Step 5: Restore NuGet packages
-    - name: Restore dependencies
-      run: dotnet restore
-
-    # Step 6: Apply UserDataDbContext Migrations
-    - name: Apply UserDataDbContext Migrations
-      run: |
-        MIGRATIONS=$(git diff --name-only HEAD^1 HEAD | grep 'Data/Migrations/UserDataDbContext/')
-        if [ -n "$MIGRATIONS" ]; then
-          echo "Applying migrations for UserDataDbContext"
-          if ! dotnet ef database update --verbose --context UserDataDbContext; then
-            echo "##[error]Migration failed for UserDataDbContext! You may want to manually rollback the database snapshot."
+          # Build the project
+          if ! dotnet build; then
+            echo "##[error]Build failed! Reverting changes..."
+            git reset --hard $old_commit
             exit 1
           fi
-        else
-          echo "No new migrations for UserDataDbContext"
-        fi
 
-    # Step X: Revert to previous commit if the build fails
-    - name: Revert to previous commit
-      if: failure()
-      run: |
-        old_commit=$(cat old_commit.txt)
-        git reset --hard $old_commit
+          # Run the application to check for developer certificate issues
+          if dotnet run | grep -q "Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found."; then
+            echo "##[error]HTTPS configuration error detected! Cleaning and trusting developer certificates."
+            dotnet dev-certs https --clean
+            dotnet dev-certs https --trust
+          else
+            echo "No HTTPS configuration error detected."
+          fi
 
-    # Step 7: Build the project
-    - name: Build the project
-      run: |
-        if ! dotnet build --no-restore; then
-          echo "##[error]Build failed! Reverting changes..."
-          old_commit=$(cat old_commit.txt)
-          git reset --hard $old_commit
-          exit 1
-        fi
+          # Start the Kestrel service again
+          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
 
-    # Step 8: Run the application to check for developer certificate issues
-    - name: Run the app to check for HTTPS error
-      run: |
-        if dotnet run | grep -q "Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found."; then
-          echo "##[error]HTTPS configuration error detected! Cleaning and trusting developer certificates."
-          dotnet dev-certs https --clean
-          dotnet dev-certs https --trust
-        else
-          echo "No HTTPS configuration error detected."
-        fi
-
-    # Step 9: Start Kestrel service
-    - name: Start Kestrel Service
-      run: sudo systemctl start kestrel-mockinterviews.service
-
-    # Step 12: Upload test results (if needed)
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
+    # Step 3: Health Check
+    - name: Health Check
+      uses: fjogeleit/http-request-action@v1
       with:
-        name: TestResults
-        path: TestResults
-
-    # Step 13: Exit SSH (Placeholder)
-    - name: Exit SSH
-      run: echo "Exit SSH step placeholder"
+        url: ${{ secrets.DOMAIN_NAME }}
+        method: 'GET'
+        expected-status: '200'
+        timeout: '5000'

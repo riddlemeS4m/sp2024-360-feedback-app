@@ -34,6 +34,9 @@ jobs:
           # Pull the latest code
           git pull
 
+          # Change directories again
+          cd Capstone_360s
+
           # Restore NuGet packages
           dotnet restore
 

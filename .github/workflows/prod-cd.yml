@@ -44,6 +44,7 @@ jobs:
             if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}}; then
               echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
               git reset --hard $old_commit
+              echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
               exit 1
             fi
           else
@@ -54,6 +55,7 @@ jobs:
           if ! dotnet build; then
             echo "##[error]Build failed! Reverting changes..."
             git reset --hard $old_commit
+            echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
             exit 1
           fi
 

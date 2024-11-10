@@ -10,7 +10,6 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     # Step 1: Ensure MySQL Client Tools are installed (if needed)

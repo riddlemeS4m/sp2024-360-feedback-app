@@ -29,3 +29,4 @@ jobs:
       with:
         name: mysql-backup
         path: backup_${{ secrets.DATABASE_NAME }}_*.sql
+        retention-days: 5

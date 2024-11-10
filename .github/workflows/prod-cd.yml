@@ -38,13 +38,13 @@ jobs:
           cd Capstone_360s
 
           # Restore NuGet packages
-          dotnet restore
+          dotnet restore -p:WarningLevel=0
 
           # Apply migrations conditionally
           MIGRATIONS=$(git diff --name-only $old_commit HEAD | grep 'Data/Migrations/FeedbackDb/')
           if [ -n "$MIGRATIONS" ]; then
             echo "Applying migrations for FeedbackDbContext"
-            if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}}; then
+            if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}} -p:WarningLevel=0; then
               echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
               git reset --hard $old_commit
               echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
@@ -55,24 +55,26 @@ jobs:
           fi
 
           # Build the project
-          if ! dotnet build; then
+          if ! dotnet build -p:WarningLevel=0; then
             echo "##[error]Build failed! Reverting changes..."
             git reset --hard $old_commit
             echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
             exit 1
           fi
 
+          # Start the Kestrel service again
+          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
+
           # Run the application to check for developer certificate issues
-          if dotnet run | grep -q "Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found."; then
+          if echo ${{ secrets.DROPLET_PASSWORD }} | sudo journalctl -u kestrel-mockinterviews.service --since "5 minutes ago" -g "No server certificate was specified" | grep -q "No server certificate was specified"; then
             echo "##[error]HTTPS configuration error detected! Cleaning and trusting developer certificates."
+            echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl stop ${{ secrets.KESTREL_SERVICE_NAME }}
             dotnet dev-certs https --clean
             dotnet dev-certs https --trust
+            echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
           else
             echo "No HTTPS configuration error detected."
           fi
-
-          # Start the Kestrel service again
-          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
 
     # Step 3: Health Check
     - name: Health Check

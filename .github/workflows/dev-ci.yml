@@ -54,4 +54,15 @@ jobs:
     
     # Optional Step: Check if .NET version can be updated
     - name: Check for .NET SDK updates
-      run: dotnet sdk check | grep available
+      run: |
+        current_version=$(dotnet --list-sdks | grep 6 | awk '{print $1}')
+        echo "Current .NET 6 SDK version: $current_version"
+        
+        latest_version=$(dotnet sdk check | grep 6 | awk 'NR==1{print $3}')
+        echo "Latest available .NET 6 SDK version: $latest_version"
+    
+        if [ "$current_version" != "$latest_version" ]; then
+          echo "##[warning]There is a new .NET 6 SDK update available: $latest_version"
+        else
+          echo "You're already using the latest .NET 6 SDK."
+        fi

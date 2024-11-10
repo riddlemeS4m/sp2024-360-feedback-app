@@ -51,6 +51,16 @@ namespace Capstone_360s.Services.FeedbackDb
             return entity;
         }
 
+        public async Task UpdateRangeAsync(IEnumerable<T> entities)
+        {
+            _dbSet.AttachRange(entities);
+            foreach(var entity in entities)
+            {
+                _context.Entry(entity).State = EntityState.Modified;
+            }
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<bool> DeleteAsync(object id)
         {
             var entity = await _dbSet.FindAsync(id);

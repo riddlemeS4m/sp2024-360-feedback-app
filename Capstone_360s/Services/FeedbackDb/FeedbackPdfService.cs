@@ -15,12 +15,21 @@ namespace Capstone_360s.Services.FeedbackDb
 
         public async Task<IEnumerable<FeedbackPdf>> GetFeedbackByProjectIdAndRoundId(Guid projectId, int roundId)
         {
-            _logger.LogInformation("Getting feedback by project id, time frame id, and round id...");
+            _logger.LogInformation("Getting feedback pdfs by project id and round id...");
             return await _dbSet
                 .Include(x => x.Round)
                 .Include(x => x.Project)
                 .Include(x => x.User)
                 .Where(f => f.ProjectId == projectId && f.RoundId == roundId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<FeedbackPdf>> GetFeedbackPdfsByProjectIdsAndRoundId(List<Guid> projectIds, int roundId)
+        {
+            _logger.LogInformation("Getting feedback pdfs for multiple projects and round id");
+
+            return await _dbSet
+                .Where(f => projectIds.Contains(f.ProjectId) && f.RoundId == roundId)
                 .ToListAsync();
         }
     }

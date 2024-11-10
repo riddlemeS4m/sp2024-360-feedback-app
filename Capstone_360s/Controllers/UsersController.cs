@@ -282,7 +282,7 @@ namespace Capstone_360s.Controllers
                     ]);
 
                     // Loop through members 1 to 6
-                    for (int memberIndex = 1; memberIndex <= 6; memberIndex++)
+                    for (int memberIndex = 1; memberIndex < project.NoOfMembers; memberIndex++)
                     {
                         var memberName = (string)typeof(Qualtrics).GetProperty($"Member{memberIndex}NameConfirmation")?.GetValue(row, null);
                         if (!string.IsNullOrEmpty(memberName?.Trim()))

@@ -1,4 +1,4 @@
-name: 360s Feedback - CI Workflow - Prod
+name: 360s Feedback App - CI Workflow - Prod
 
 on:
   push:

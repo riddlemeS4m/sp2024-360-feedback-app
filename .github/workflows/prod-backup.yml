@@ -1,0 +1,31 @@
+name: 360s Feedback App - Database Backup - Prod
+
+on:
+  workflow_run:
+    workflows: ["360s Feedback App - CI Workflow - Prod"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Ensure MySQL Client Tools are installed (if needed)
+    - name: Install MySQL Client
+      run: sudo apt-get update && sudo apt-get install -y mysql-client
+
+    # Step 2: Run mysqldump and save the backup locally on the runner
+    - name: Run mysqldump
+      env:
+        MYSQL_PWD: ${{ secrets.DATABASE_PASSWORD }}  # Avoid password exposure
+      run: |
+        mysqldump -h ${{ secrets.DATABASE_IP }} -u ${{ secrets.DATABASE_USER }} ${{ secrets.DATABASE_NAME }} > backup_${{ secrets.DATABASE_NAME }}_$(date +%Y%m%d%H%M%S).sql
+
+    # Step 3: Upload the backup as a GitHub Actions artifact
+    - name: Upload backup
+      uses: actions/upload-artifact@v4
+      with:
+        name: mysql-backup
+        path: backup_${{ secrets.DATABASE_NAME }}_*.sql

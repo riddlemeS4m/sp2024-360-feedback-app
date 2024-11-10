@@ -1,0 +1,79 @@
+name: 360s Feedback App - CD Workflow - Prod
+
+on:
+  workflow_run:
+    workflows: ["360s Feedback App - CI Workflow - Prod"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+    # Step 1: Check out the code
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    # Step 2: SSH into the server, stop the service, and run all deployment commands
+    - name: SSH and Deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.DROPLET_IP }}
+        username: webadmin
+        password: ${{ secrets.DROPLET_PASSWORD }}
+        script: |
+          # Stop the Kestrel service
+          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl stop ${{ secrets.KESTREL_SERVICE_NAME }}
+
+          # Store the current commit hash before pulling the latest code
+          cd ${{ secrets.PROJECT_DIRECTORY }}
+          git rev-parse HEAD > old_commit.txt
+          old_commit=$(cat old_commit.txt)
+
+          # Pull the latest code
+          git pull
+
+          # Restore NuGet packages
+          dotnet restore
+
+          # Apply migrations conditionally
+          MIGRATIONS=$(git diff --name-only $old_commit HEAD | grep 'Data/Migrations/FeedbackDb/')
+          if [ -n "$MIGRATIONS" ]; then
+            echo "Applying migrations for FeedbackDbContext"
+            if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}}; then
+              echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
+              git reset --hard $old_commit
+              exit 1
+            fi
+          else
+            echo "No new migrations for FeedbackDbContext"
+          fi
+
+          # Build the project
+          if ! dotnet build; then
+            echo "##[error]Build failed! Reverting changes..."
+            git reset --hard $old_commit
+            exit 1
+          fi
+
+          # Run the application to check for developer certificate issues
+          if dotnet run | grep -q "Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found."; then
+            echo "##[error]HTTPS configuration error detected! Cleaning and trusting developer certificates."
+            dotnet dev-certs https --clean
+            dotnet dev-certs https --trust
+          else
+            echo "No HTTPS configuration error detected."
+          fi
+
+          # Start the Kestrel service again
+          echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
+
+    # Step 3: Health Check
+    - name: Health Check
+      uses: fjogeleit/http-request-action@v1
+      with:
+        url: ${{ secrets.DOMAIN_NAME }}
+        method: 'GET'
+        expected-status: '200'
+        timeout: '5000'

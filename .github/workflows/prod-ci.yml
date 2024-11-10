@@ -1,7 +1,7 @@
-name: 360s Feedback - CI Workflow - Prod
+name: 360s Feedback App - CI Workflow - Prod
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -32,7 +32,7 @@ jobs:
     
     # Step 6: Run tests and save results
     - name: Run tests
-      run: dotnet test Capstone_360s/Capstone_360s.sln --logger "trx" --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test Capstone_360s/Capstone_360s.sln --logger "trx" --configuration Release --verbosity normal --collect:"XPlat Code Coverage" -p:WarningLevel=0
     
     - name: Combine Coverage Reports # This is because one report is produced per project, and we want one result for all of them.
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4

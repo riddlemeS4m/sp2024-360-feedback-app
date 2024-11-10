@@ -1,10 +1,9 @@
 name: 360s Feedback App - Database Backup - Prod
 
 on:
-  workflow_run:
-    workflows: ["360s Feedback App - CI Workflow - Prod"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -29,3 +28,4 @@ jobs:
       with:
         name: mysql-backup
         path: backup_${{ secrets.DATABASE_NAME }}_*.sql
+        retention-days: 5

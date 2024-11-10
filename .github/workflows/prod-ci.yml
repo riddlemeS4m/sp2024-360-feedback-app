@@ -1,0 +1,53 @@
+name: 360s Feedback - CI Workflow - Prod
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pr-build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Check out the code
+    - uses: actions/checkout@v4
+
+    # Step 2: Cache .NET packages
+    - name: Cache .NET packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    # Step 3: Set up .NET
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.x
+
+    # Step 4: Restore dependencies
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Step 5: Build the app
+    - name: Build the app
+      run: dotnet build --no-restore
+
+    # Step 6: Run tests and save results
+    - name: Run tests
+      run: dotnet test --logger "trx" --results-directory "TestResults"
+
+    # Step 7: Upload test results as an artifact
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: TestResults
+        path: TestResults
+    
+    # Step 8: Ensure the workflow fails if tests fail
+    - name: Fail if tests fail
+      if: failure()
+      run: exit 1

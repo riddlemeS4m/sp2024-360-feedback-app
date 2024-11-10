@@ -1,0 +1,102 @@
+name: 360s Feedback App - CD Workflow - Prod
+
+on:
+  workflow_run:
+    workflows: ["360s Feedback App - CI Workflow - Prod"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+    # Step 1: SSH into the server (Placeholder)
+    - name: SSH into server
+      run: echo "SSH step placeholder"
+
+    # Step 2: Stop the Kestrel service
+    - name: Stop Kestrel Service
+      run: sudo systemctl stop kestrel-mockinterviews.service
+
+    # Step 3: Snapshot the SQL Server database
+    - name: Snapshot SQL Server Database
+      run: |
+        if [ -n "$(git diff --name-only HEAD^1 HEAD | grep 'Data/Migrations/')" ]; then
+          echo "Snapshotting databases before applying migrations..."
+          sqlcmd -S <server_name> -U <username> -P <password> -Q "BACKUP DATABASE [<database_name>] TO DISK = N'/path/to/backup/<database_name>.bak' WITH INIT, FORMAT"
+        fi
+
+    # Step 3: Store the current commit before pulling the latest code
+    - name: Store current commit hash
+      run: |
+        cd /path/to/your/project
+        git rev-parse HEAD > old_commit.txt
+
+    # Step 4: Change to project directory and pull latest code (Placeholder for directory)
+    - name: Pull latest code
+      run: |
+        cd /path/to/your/project
+        git pull
+
+    # Step 5: Restore NuGet packages
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Step 6: Apply UserDataDbContext Migrations
+    - name: Apply UserDataDbContext Migrations
+      run: |
+        MIGRATIONS=$(git diff --name-only HEAD^1 HEAD | grep 'Data/Migrations/UserDataDbContext/')
+        if [ -n "$MIGRATIONS" ]; then
+          echo "Applying migrations for UserDataDbContext"
+          if ! dotnet ef database update --verbose --context UserDataDbContext; then
+            echo "##[error]Migration failed for UserDataDbContext! You may want to manually rollback the database snapshot."
+            exit 1
+          fi
+        else
+          echo "No new migrations for UserDataDbContext"
+        fi
+
+    # Step X: Revert to previous commit if the build fails
+    - name: Revert to previous commit
+      if: failure()
+      run: |
+        old_commit=$(cat old_commit.txt)
+        git reset --hard $old_commit
+
+    # Step 7: Build the project
+    - name: Build the project
+      run: |
+        if ! dotnet build --no-restore; then
+          echo "##[error]Build failed! Reverting changes..."
+          old_commit=$(cat old_commit.txt)
+          git reset --hard $old_commit
+          exit 1
+        fi
+
+    # Step 8: Run the application to check for developer certificate issues
+    - name: Run the app to check for HTTPS error
+      run: |
+        if dotnet run | grep -q "Unable to configure HTTPS endpoint. No server certificate was specified, and the default developer certificate could not be found."; then
+          echo "##[error]HTTPS configuration error detected! Cleaning and trusting developer certificates."
+          dotnet dev-certs https --clean
+          dotnet dev-certs https --trust
+        else
+          echo "No HTTPS configuration error detected."
+        fi
+
+    # Step 9: Start Kestrel service
+    - name: Start Kestrel Service
+      run: sudo systemctl start kestrel-mockinterviews.service
+
+    # Step 12: Upload test results (if needed)
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: TestResults
+        path: TestResults
+
+    # Step 13: Exit SSH (Placeholder)
+    - name: Exit SSH
+      run: echo "Exit SSH step placeholder"

@@ -430,12 +430,54 @@ namespace Capstone_360s.Controllers
             for(int i = 0; i < pdfs.Count; i++)
             {
                 pdfs[i].ParentGDFolderId = projectRoundsDict[pdfs[i].ProjectId];
+                _logger.LogInformation($"Requesting to upload file {i + 1} of {pdfs.Count}...");
                 var fileId = await _googleDriveService.UploadFile(pdfs[i].Data, pdfs[i].FileName, pdfs[i].ParentGDFolderId);
                 pdfs[i].GDFileId = fileId;
             }
 
+            var feedbackDict = new Dictionary<Guid, List<Feedback>>();
+            for (int k = 0; k < feedback.Count(); k++)
+            {
+                var oneFeedback = feedback.ElementAt(k);
+
+                if (!feedbackDict.TryGetValue(oneFeedback.RevieweeId, out List<Feedback> bogusList))
+                {
+                    feedbackDict[oneFeedback.RevieweeId] = new List<Feedback> { oneFeedback };
+                }
+                else
+                {
+                    feedbackDict[oneFeedback.RevieweeId].Add(oneFeedback);
+                }
+            }
 
             await _feedbackPdfService.AddRange(pdfs);
+
+            // update feedback table to link to feedbackpdfs 
+            var feedbackPdfs = await _feedbackPdfService.GetFeedbackPdfsByProjectIdsAndRoundId(projectIds, roundId);
+            var feedbackPdfsDict = new Dictionary<Guid, Guid>();
+
+            foreach(var feedbackPdf in feedbackPdfs)
+            {
+                if(!feedbackPdfsDict.TryGetValue(feedbackPdf.UserId, out Guid pdfId))
+                {
+                    feedbackPdfsDict[feedbackPdf.UserId] = feedbackPdf.Id;
+                }
+            }
+
+            var updatedFeedbacks = new List<Feedback>();
+
+            for (int j = 0; j < pdfs.Count(); j++)
+            {
+                var onePdf = pdfs.ElementAt(j);
+
+                foreach(var oneFeedback in feedbackDict[onePdf.UserId])
+                {
+                    oneFeedback.FeedbackPdfId = feedbackPdfsDict[onePdf.UserId];
+                    updatedFeedbacks.Add(oneFeedback);
+                }
+            }
+
+            await _feedbackService.UpdateRangeAsync(updatedFeedbacks);
 
             return View(new Project { NoOfRounds = roundId});
         }

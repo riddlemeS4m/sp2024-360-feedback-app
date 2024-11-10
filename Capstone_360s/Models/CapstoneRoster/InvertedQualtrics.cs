@@ -1,5 +1,6 @@
 ﻿using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Models.Survey;
+using static iText.StyledXmlParser.Jsoup.Select.Evaluator;
 
 namespace Capstone_360s.Models.CapstoneRoster
 {
@@ -29,6 +30,11 @@ namespace Capstone_360s.Models.CapstoneRoster
         public InvertedQualtrics() 
         {
             this.FullName = this.FirstName + " " + this.LastName;
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(InvertedQualtrics)}: Recipient = {Email}, Reviewer = {ReviewerEmail}";
         }
     }
 }

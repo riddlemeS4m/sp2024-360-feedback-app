@@ -32,7 +32,7 @@ namespace Capstone_360s
 
             string connectionStringPrefix;
 
-            if (string.IsNullOrEmpty(environment) || environment == Environments.Development)
+            if (environment == Environments.Development || string.IsNullOrEmpty(environment))
             {
                 connectionStringPrefix = "ConnectionStrings:Development:";
             }
@@ -84,7 +84,8 @@ namespace Capstone_360s
             builder.Services.AddMemoryCache();
 
             builder.Services.AddDbContext<IFeedbackDbContext, FeedbackMySqlDbContext>(options =>
-                    options.UseMySql(feedbackConnectionString, ServerVersion.AutoDetect(feedbackConnectionString)));
+                    options.UseMySql(feedbackConnectionString, ServerVersion.AutoDetect(feedbackConnectionString), 
+                        mySqlOptions => mySqlOptions.EnableRetryOnFailure()));
 
             builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackPdfService>);

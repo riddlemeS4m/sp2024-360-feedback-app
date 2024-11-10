@@ -88,7 +88,7 @@ namespace Capstone_360s.Services.PDF
 
             string[] rounds = new string[numberOfRounds];
             var stringRounds = await _roundService.GetFirstNRounds(numberOfRounds);
-            rounds = stringRounds.OrderByDescending(x => x.Id).Select(x => x.Name).ToArray();
+            rounds = stringRounds.OrderBy(x => x.Id).Select(x => x.Name).ToArray();
 
             var users = biggerDict[currentRoundId].Keys ?? throw new Exception("'users' is null.");
 
@@ -163,8 +163,8 @@ namespace Capstone_360s.Services.PDF
                             perfScore += allRoundFeedbackForUser[l].Ratings[Capstone.Performance];
                         }
 
-                        // only needs to be set the first time through the k loop
-                        if(k == 1)
+                        // only needs to be set the last time through the k loop
+                        if(k == numberOfRounds)
                         {
                             strengths[l] = allRoundFeedbackForUser[l].Questions[Capstone.Strengths];
                             improvements[l] = allRoundFeedbackForUser[l].Questions[Capstone.Improvements];
@@ -172,11 +172,14 @@ namespace Capstone_360s.Services.PDF
                         }
                     }
 
-                    foreach(string value in strengths)
+                    if (k == numberOfRounds)
                     {
-                        if(value == null)
+                        foreach (string value in strengths)
                         {
-                            throw new Exception("Comments were not populated properly.");
+                            if (value == null)
+                            {
+                                throw new Exception("Comments were not populated properly.");
+                            }
                         }
                     }
 

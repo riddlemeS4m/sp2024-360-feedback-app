@@ -75,7 +75,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("TimeframeId");
 
-                    b.ToTable("feedback");
+                    b.ToTable("feedback", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.FeedbackPdf", b =>
@@ -116,7 +116,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("pdffiles");
+                    b.ToTable("pdffiles", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Metric", b =>
@@ -159,7 +159,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("metrics");
+                    b.ToTable("metrics", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.MetricResponse", b =>
@@ -177,7 +177,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("FeedbackId");
 
-                    b.ToTable("metricresponses");
+                    b.ToTable("metricresponses", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Organization", b =>
@@ -196,7 +196,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasKey("Id");
 
-                    b.ToTable("organizations");
+                    b.ToTable("organizations", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Project", b =>
@@ -247,7 +247,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId", "TimeframeId");
 
-                    b.ToTable("projects");
+                    b.ToTable("projects", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.ProjectRound", b =>
@@ -271,7 +271,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("RoundId");
 
-                    b.ToTable("projectrounds");
+                    b.ToTable("projectrounds", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Question", b =>
@@ -305,7 +305,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("questions");
+                    b.ToTable("questions", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.QuestionResponse", b =>
@@ -324,7 +324,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("FeedbackId");
 
-                    b.ToTable("questionresponses");
+                    b.ToTable("questionresponses", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Round", b =>
@@ -342,7 +342,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasKey("Id");
 
-                    b.ToTable("rounds");
+                    b.ToTable("rounds", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
@@ -357,7 +357,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("teammembers");
+                    b.ToTable("teammembers", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Timeframe", b =>
@@ -398,7 +398,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("timeframes");
+                    b.ToTable("timeframes", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.User", b =>
@@ -437,7 +437,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("users");
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Feedback", b =>

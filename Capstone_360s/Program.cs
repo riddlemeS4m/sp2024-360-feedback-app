@@ -10,9 +10,13 @@ using Capstone_360s.Utilities;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using SendGrid;
+using System.Security.Claims;
 
 namespace Capstone_360s
 {
@@ -28,7 +32,8 @@ namespace Capstone_360s
             // Edit configuration.
             builder.Configuration.AddUserSecrets<Program>();
 
-            var googleCredentialSection = builder.Configuration.GetSection("GoogleCredential");
+            var googleCredentialSection = builder.Configuration.GetSection("GoogleCredential") ?? throw new InvalidOperationException($"'GoogleCredential' section not found.");
+            var sendGridKey = builder.Configuration["SendGrid"] ?? throw new InvalidOperationException($"'SendGrid' key was not found.");
 
             string connectionStringPrefix;
 
@@ -51,7 +56,59 @@ namespace Capstone_360s
                 options.KnownNetworks.Clear();
                 options.KnownProxies.Clear();
             });
-            
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            .AddCookie(
+            //    options =>
+            //{
+            //    options.LoginPath = "/Account/Login";
+            //    options.LogoutPath = "/Account/Logout";
+            //    options.AccessDeniedPath = "/Account/AccessDenied";
+            //    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+            //    options.SlidingExpiration = true;
+            //    options.Cookie.HttpOnly = true;
+            //    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Use Always if on HTTPS
+            //    options.Cookie.SameSite = SameSiteMode.None; // Adjust based on your environment
+            //    options.Cookie.Path = "/";
+            //    options.Cookie.MaxAge = TimeSpan.FromHours(1);
+            //}
+            )
+            .AddMicrosoftAccount(microsoftOptions =>
+            {
+                microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? throw new InvalidOperationException($"Microsoft ClientId not found.");
+                microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? throw new InvalidOperationException($"Microsoft ClientSecret not found.");
+                microsoftOptions.AuthorizationEndpoint = builder.Configuration["Authentication:Microsoft:AuthorizationEndpoint"] ?? throw new InvalidOperationException($"Microsoft AuthorizationEndpoint not found.");
+                microsoftOptions.TokenEndpoint = builder.Configuration["Authentication:Microsoft:TokenEndpoint"] ?? throw new InvalidOperationException($"Microsoft TokenEndpoint not found.");
+                //microsoftOptions.CallbackPath = "/signin-microsoft";
+            });
+
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+                options.AddPolicy("SponsorOnly", policy => policy.RequireRole("Sponsor"));
+                options.AddPolicy("ProjectManagerOnly", policy => policy.RequireRole("ProjectManager"));
+                options.AddPolicy("MemberOnly", policy => policy.RequireRole("Member"));
+
+                //options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                //    .RequireAuthenticatedUser()
+                //    .Build();
+
+                // Set the role claim type explicitly
+                //options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                //    .RequireClaim(ClaimTypes.Role)
+                //    .Build();
+            }).Configure<AuthorizationOptions>(options =>
+            {
+                options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build();
+            });
+
             builder.Services.AddSingleton(_ => {
                 string applicationName = "Capstone 360s App ASP.Net Core MVC";
                 string json = GoogleDriveUtility.SerializeCredentials(googleCredentialSection);
@@ -87,6 +144,19 @@ namespace Capstone_360s
                     options.UseMySql(feedbackConnectionString, ServerVersion.AutoDetect(feedbackConnectionString), 
                         mySqlOptions => mySqlOptions.EnableRetryOnFailure()));
 
+            // requires the entire database schema to be changed, blegh
+            //builder.Services.AddIdentity<User, IdentityRole<Guid>>()
+            //    .AddEntityFrameworkStores<FeedbackMySqlDbContext>()
+            //    .AddDefaultTokenProviders();
+
+            //builder.Services.Configure<IdentityOptions>(options =>
+            //{
+            //    options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;
+            //    options.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
+            //    options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
+            //});
+
+            // look into service factory/wheel so I don't have to have all this in program.cs
             builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<FeedbackPdfService>);
             builder.Services.AddScoped(ServiceFactory.CreateService<MetricService>);
@@ -109,6 +179,13 @@ namespace Capstone_360s
                 return new GoogleDriveService(driveService, cacheService, logger);
             });
 
+            builder.Services.AddSingleton(_ =>
+            {
+                return new SendGridClient(sendGridKey);
+            });
+
+            // remember, have an organization context that has method/class types associated with it, and register an entire organization context
+            // organization context can inherit an interface with all these types
             builder.Services.AddScoped<CapstoneMapCsvToQualtrics>();
 
             builder.Services.AddScoped<CapstoneMapToInvertedQualtrics>(serviceProvider =>
@@ -138,9 +215,7 @@ namespace Capstone_360s
                 var invertQualtricsService = serviceProvider.GetRequiredService<CapstoneMapToInvertedQualtrics>();
                 var logger = serviceProvider.GetRequiredService<ILogger<CapstonePdfService>>();
                 return new CapstonePdfService(roundService, feedbackService, userService, invertQualtricsService, logger);
-            });
-
-            
+            });            
 
             builder.Services.AddControllersWithViews();
 
@@ -161,7 +236,6 @@ namespace Capstone_360s
                     logger.LogInformation("IGoogleDrive resolved successfully.");
                 }
             }
-
 
             var app = builder.Build();
 
@@ -185,11 +259,30 @@ namespace Capstone_360s
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+
+            app.Use(async (context, next) =>
+            {
+                var user = context.User;
+                if (user.Identity.IsAuthenticated && user.HasClaim(c => c.Type == "Role"))
+                {
+                    var claimsIdentity = user.Identity as ClaimsIdentity;
+                    var roleClaim = claimsIdentity?.FindFirst("Role");
+
+                    if (roleClaim != null)
+                    {
+                        claimsIdentity.RemoveClaim(roleClaim);
+                        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                    }
+                }
+
+                await next();
+            });
 
             app.Run();
         }

@@ -12,7 +12,8 @@
 <p>
     <a class="btn btn-primary" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
     <a class="btn btn-secondary" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
-    <a class="btn btn-warning" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Capstone Roster</a>
+    <a class="btn btn-success disabled" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Process Surveys</a>
+    <a class="btn btn-warning" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a>
 </p>
 
 <table class="table">

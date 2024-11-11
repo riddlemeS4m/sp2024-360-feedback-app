@@ -5,10 +5,12 @@ using Capstone_360s.Models.VMs;
 using Capstone_360s.Services.FeedbackDb;
 using Capstone_360s.Services.Maps;
 using Capstone_360s.Services.PDF;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Capstone_360s.Controllers
 {
+    [Authorize(Policy = "AdminOnly")]
     public class UploadProcessController : Controller
     {
         private readonly IGoogleDrive _googleDriveService;

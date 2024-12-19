@@ -32,6 +32,8 @@ namespace Capstone_360s.Services.FeedbackDb
                 .Include(x => x.Project)
                 .Include(x => x.Reviewer)
                 .Where(f => f.TimeframeId == timeframeId && f.RoundId <= roundId)
+                .GroupBy(f => new { f.RevieweeId, f.ReviewerId, f.ProjectId, f.TimeframeId, f.RoundId, f.OriginalResponseId })
+                .Select(g => g.First())
                 .ToListAsync();
         }
     }

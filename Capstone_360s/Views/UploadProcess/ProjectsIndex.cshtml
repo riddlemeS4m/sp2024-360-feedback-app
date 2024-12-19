@@ -1,15 +1,20 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
+﻿@using Capstone_360s.Services.FeedbackDb
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
+@inject FeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Projects";
 
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
+    var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
 }
 
-<h1>Projects</h1>
+<h1>@timeframe.Name Projects</h1>
+<h4>Select a project below</h4>
 
 <p>
+    <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
     <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
     <a class="btn btn-secondary" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
     <a class="btn btn-success disabled" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Process Surveys</a>
@@ -45,10 +50,6 @@
             }
         </tbody>
     </table>
-    <p>
-        <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
-    </p>
-
 </div>
 
 

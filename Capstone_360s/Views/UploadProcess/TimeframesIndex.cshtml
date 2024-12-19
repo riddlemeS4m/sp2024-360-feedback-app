@@ -1,14 +1,20 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Timeframe>
+﻿@using Capstone_360s.Services.FeedbackDb
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.Timeframe>
+@inject FeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Timeframes";
 
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+    var organization = await feedbackDbServiceFactory.OrganizationService.GetByIdAsync(Guid.Parse(organizationId));
+
 }
 
-<h1>Timeframes</h1>
+<h1>Welcome to @organization.Name!</h1>
+<h4>Select a timeframe below</h4>
 
 <p>
+    <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
     <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create New</a>
 </p>
 
@@ -49,10 +55,6 @@
             }
         </tbody>
     </table>
-    <p>
-        <a class="btn btn-primary" asp-controller="Home" asp-action="LandingPage">Back</a>
-    </p>
-
 </div>
 </div>
 

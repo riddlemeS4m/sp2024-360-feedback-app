@@ -9,6 +9,7 @@ using Capstone_360s.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Capstone_360s.Services.Configuration.Organizations;
+using Org.BouncyCastle.Asn1.Cms;
 
 namespace Capstone_360s.Controllers
 {
@@ -48,10 +49,9 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UploadCapstoneRoster(IFormFile roster, DateTime filterDate, int roundId)
+        public async Task<IActionResult> UploadCapstoneRoster(IFormFile roster, DateTime filterDate, int roundId, [FromQuery] int timeframeId)
         {
             var organizationId = Guid.Parse(OrganizationId);
-            var timeframeId = int.Parse(Request.Query["timeframeId"]);
             var timeframe = await _serviceFactory.TimeframeService.GetByIdAsync(timeframeId);
 
             _logger.LogInformation("Uploading roster...");
@@ -74,7 +74,7 @@ namespace Capstone_360s.Controllers
             if(data.Count == 0)
             {
                 _logger.LogInformation($"{data.Count} rows were read and mapped, returning to home screen...");
-                return RedirectToAction(nameof(UploadProcessController.Index), "UploadProcess");
+                return RedirectToAction(nameof(UploadProcessController.Index), "UploadProcess", new { organizationId });
             }
 
             // check that all metrics are in the database, and add ones that aren't
@@ -247,7 +247,7 @@ namespace Capstone_360s.Controllers
                     var row = (Qualtrics)rows.ElementAt(j);
 
                     // Self Feedback
-                    var selfFeedback = CreateFeedback(userDicts[row.Email], userNamesDict[row.FirstName.Trim() + " " + row.LastName.Trim()], project.Id, roundId, timeframeId, row.ResponseId);
+                    var selfFeedback = CreateFeedback(userDicts[row.Email], userNamesDict[row.FirstName.Trim() + " " + row.LastName.Trim()], project.Id, roundId, timeframeId, row.ResponseId, row.StartDate, row.EndDate);
                     feedback.Add(selfFeedback);
 
                     AddResponses(selfFeedback,
@@ -270,7 +270,7 @@ namespace Capstone_360s.Controllers
                         var memberName = (string)typeof(Qualtrics).GetProperty($"Member{memberIndex}NameConfirmation")?.GetValue(row, null);
                         if (!string.IsNullOrEmpty(memberName?.Trim()))
                         {
-                            var feedbackMember = CreateFeedback(userDicts[row.Email], userNamesDict[memberName.Trim()], project.Id, roundId, timeframeId, row.ResponseId);
+                            var feedbackMember = CreateFeedback(userDicts[row.Email], userNamesDict[memberName.Trim()], project.Id, roundId, timeframeId, row.ResponseId, row.StartDate, row.EndDate);
                             feedback.Add(feedbackMember);
 
                             AddResponses(feedbackMember, new[]
@@ -291,8 +291,13 @@ namespace Capstone_360s.Controllers
                 }
 
                 // Helper method to create feedback
-                Feedback CreateFeedback(Guid reviewerId, Guid revieweeId, Guid projectId, int roundId, int timeframeId, string originalResponseId)
+                Feedback CreateFeedback(Guid reviewerId, Guid revieweeId, Guid projectId, int roundId, int timeframeId, string originalResponseId, DateTime? startTime, DateTime? endTime)
                 {
+                    TimeSpan difference = new(0,0,0);
+                    if(endTime != null && startTime != null){
+                        difference = (DateTime)endTime - (DateTime)startTime;
+                    }
+
                     return new Feedback
                     {
                         ReviewerId = reviewerId,
@@ -300,7 +305,10 @@ namespace Capstone_360s.Controllers
                         ProjectId = projectId,
                         RoundId = roundId,
                         TimeframeId = timeframeId,
-                        OriginalResponseId = originalResponseId
+                        OriginalResponseId = originalResponseId,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        DurationSeconds = (int)difference.TotalSeconds
                     };
                 }
 
@@ -318,8 +326,11 @@ namespace Capstone_360s.Controllers
             await _serviceFactory.QuestionResponseService.AddRange(questionResponses);
 
             _logger.LogInformation($"{data.Count} rows were read and mapped, returning to home screen...");
-            //return RedirectToAction(nameof(UploadProcessController.ProjectRoundCreate), "UploadProcess", new { organizationId = organizationId, timeframeId = timeframeId });
-            return RedirectToAction(nameof(UploadProcessController.CreatePdfs), "UploadProcess", new { timeframeId = timeframeId, roundId = roundId });
+            //return RedirectToAction(nameof(UploadProcessController.ProjectRoundCreate), "UploadProcess", new { organizationId = organizationId, timeframeId = timeframeId 
+
+            var redirectUrl = Url.Action(nameof(UploadProcessController.CreatePdfs), "UploadProcess", new { timeframeId = timeframeId, roundId = roundId, organizationId = organizationId });
+
+            return Json(new { redirectUrl });
         }
 
         public async Task<IActionResult> OrganizationUsersIndex()

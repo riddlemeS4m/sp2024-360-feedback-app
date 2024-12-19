@@ -20,10 +20,12 @@ namespace Capstone_360s.Models.FeedbackDb
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [Display(Name = "Release Date")]
         public DateTime? ReleaseDate { get; set; }
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [Display(Name = "Due Date")]
         public DateTime? DueDate { get; set; }
 
         public string? GDFolderId { get; set;}

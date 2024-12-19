@@ -1,14 +1,21 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Organization>
+﻿@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.Organization>
+@inject IAuthorizationService authorizationService
 
 @{
     ViewData["Title"] = "Upload 360s";
+    var authorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
 }
 
 <h1>Organizations</h1>
 
-<p>
-    <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create New Organization</a>
-</p>
+@if(authorized.Succeeded)
+{
+    <p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create New Organization</a>
+    </p>
+}
 
 <div class="col-md-8">
     <table class="table">
@@ -17,8 +24,11 @@
                 <th>
                     @Html.DisplayNameFor(model => model.Name)
                 </th>
+    using Microsoft.AspNetCore.Authorization;
                 <th>
                     @Html.DisplayNameFor(model => model.Name)
+    using Capstone_360s.Services.Identity;
+    using Capstone_360s.Services.Identity;
                 </th>
                 @* <th>
                 @Html.DisplayNameFor(model => model.GDFolderId)

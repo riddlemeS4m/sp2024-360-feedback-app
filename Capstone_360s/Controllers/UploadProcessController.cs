@@ -234,43 +234,49 @@ namespace Capstone_360s.Controllers
             var projectRounds = new List<ProjectRound>();
             for(int i = 0; i < projectsList.Count; i++)
             {
+                var existingRounds = await _serviceFactory.ProjectRoundService.GetProjectRoundsByProjectId(projectsList[i].Id.ToString());
                 for(int j = 0; j < roundsList.Count; j++)
                 {
-                    var folderName = roundsList[j].Name;
-                    var projectRoundFolderId = await _googleDriveService.CreateFolderAsync(folderName, projectsList[i].GDFolderId);
-
-                    DateTime? startDate;
-                    DateTime? endDate;
-
-                    if(RoundStartDates.Count == roundsList.Count)
+                    if(!existingRounds.Any(x => x.RoundId == j + 1))
                     {
-                        startDate = RoundStartDates[j];
-                    } else { startDate = null; }
-                    
-                    if(RoundEndDates.Count == roundsList.Count)
-                    {
-                        endDate = RoundEndDates[j];
-                    } else { endDate = null; }
+                        var folderName = roundsList[j].Name;
+                        var projectRoundFolderId = await _googleDriveService.CreateFolderAsync(folderName, projectsList[i].GDFolderId);
 
-                    var projectRound = new ProjectRound
-                    {
-                        ProjectId = projectsList[i].Id,
-                        RoundId = roundsList[j].Id,
-                        GDFolderId = projectRoundFolderId,
-                        ReleaseDate = startDate,
-                        DueDate = endDate
-                    };
+                        DateTime? startDate;
+                        DateTime? endDate;
 
-                    projectRounds.Add(projectRound);
+                        if(RoundStartDates.Count == roundsList.Count)
+                        {
+                            startDate = RoundStartDates[j];
+                        } else { startDate = null; }
+                        
+                        if(RoundEndDates.Count == roundsList.Count)
+                        {
+                            endDate = RoundEndDates[j];
+                        } else { endDate = null; }
+
+                        var projectRound = new ProjectRound
+                        {
+                            ProjectId = projectsList[i].Id,
+                            RoundId = roundsList[j].Id,
+                            GDFolderId = projectRoundFolderId,
+                            ReleaseDate = startDate,
+                            DueDate = endDate
+                        };
+
+                        projectRounds.Add(projectRound);
+                    }
                 }
             }
 
-            if(projectRounds.Count != projectsList.Count * roundsList.Count)
-            {
-                throw new Exception("Not every project has the correct amount of rounds.");
-            }
+            // if(projectRounds.Count != projectsList.Count * roundsList.Count)
+            // {
+            //     throw new Exception("Not every project has the correct amount of rounds.");
+            // }
 
-            await _serviceFactory.ProjectRoundService.AddRange(projectRounds);
+            if(projectRounds.Count > 0){
+                await _serviceFactory.ProjectRoundService.AddRange(projectRounds);
+            }
 
             _logger.LogInformation("Returning to project selection view...");
             return RedirectToAction(nameof(ProjectsIndex), new { organizationId = project.OrganizationId, timeframeId = project.TimeframeId });
@@ -399,7 +405,9 @@ namespace Capstone_360s.Controllers
 
             await _serviceFactory.FeedbackService.UpdateRangeAsync(updatedFeedbacks);
 
-            return View(new Project { NoOfRounds = roundId});
+            var redirectUrl = Url.Action(nameof(ProjectsIndex), new { organizationId = OrganizationId, timeframeId = timeframeId });
+
+            return Json(new { redirectUrl });
         }
 
         public async Task<IActionResult> FeedbackPdfsIndex(int timeframeId, string projectId, int roundId)

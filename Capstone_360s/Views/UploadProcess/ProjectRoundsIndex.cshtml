@@ -1,15 +1,19 @@
 ﻿@using Capstone_360s.Models.FeedbackDb
+@using Capstone_360s.Services.FeedbackDb
 
 @model Capstone_360s.Models.VMs.ProjectRoundsIndexVM
+@inject FeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Project Rounds";
 
     var projectId = Context.Request.Query["projectId"].ToString();
+    var project = await feedbackDbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
 }
 
-<h1>Project Rounds</h1>
+<h1>@project.Name Rounds</h1>
 <p>
+    <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
     <a class="btn btn-primary" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New</a>
 </p>
 
@@ -23,8 +27,15 @@
             <th>
                 @nameof(ProjectRound.RoundId)
             </th>
+    using Capstone_360s.Services.FeedbackDb;
  *@            <th>
                 @nameof(ProjectRound.Round.Name)
+            </th>
+            <th>
+                @nameof(ProjectRound.ReleaseDate)
+            </th>
+            <th>
+                @nameof(ProjectRound.DueDate)
             </th>
 @*             <th>
                 @nameof(ProjectRound.GDFolderId)
@@ -47,6 +58,12 @@
  *@                <td>
                     @Html.DisplayFor(modelItem => item.Round.Name)
                 </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ReleaseDate)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.DueDate)
+                </td>
                 @* <td>
                     <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                 </td> *@
@@ -60,9 +77,6 @@
     </tbody>
 </table>
 </div>
-<p>
-    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
-</p>
 
 
 @section Scripts {

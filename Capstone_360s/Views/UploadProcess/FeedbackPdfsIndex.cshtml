@@ -1,6 +1,8 @@
 ﻿@using Capstone_360s.Models.FeedbackDb
+@using Capstone_360s.Services.FeedbackDb
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
+@inject FeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Round Feedback";
@@ -9,13 +11,17 @@
     var roundId = Context.Request.Query["roundId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+
+    var project = await feedbackDbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
 }
 
-<h1>PDFs</h1>
+<h1>@project.Name - Round @roundId PDFs</h1>
 @if (Model.Any())
 {
     <p>
-        <a class="btn btn-primary" href="https://drive.google.com/drive/folders/@Model.ElementAt(0).ParentGDFolderId">View
+        <a class="btn btn-warning" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId"
+            asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
+        <a class="btn btn-primary" target="_blank" href="https://drive.google.com/drive/folders/@Model.ElementAt(0).ParentGDFolderId">View
             Folder on Google Drive</a>
     </p>
 
@@ -25,6 +31,9 @@
                 <tr>
                     <th>
                         @nameof(FeedbackPdf.FileName)
+                    </th>
+                    <th>
+                        @nameof(FeedbackPdf.CreatedAt)
                     </th>
                     <th></th>
                 </tr>
@@ -37,7 +46,10 @@
                             @Html.DisplayFor(modelItem => item.FileName)
                         </td>
                         <td>
-                            <a href="https://drive.google.com/file/d/@item.GDFileId/view">View on Google Drive</a>
+                            @Html.DisplayFor(modelItem => item.CreatedAt)
+                        </td>
+                        <td>
+                            <a target="_blank" href="https://drive.google.com/file/d/@item.GDFileId/view" >View on Google Drive</a>
                         </td>
                     </tr>
                 }
@@ -50,16 +62,12 @@ else
 {
     <p>No PDFs found for this project.</p>
 }
-<p>
-    <a class="btn btn-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId"
-        asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
-</p>
 
 
 @section Scripts {
     <script>
         function navigateToSelect(url) {
-            window.location.href = url;
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
     </script>
 

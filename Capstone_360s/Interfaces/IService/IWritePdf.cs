@@ -1,6 +1,4 @@
 ﻿using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Models.Generics;
-using Capstone_360s.Models.Organizations.Capstone;
 using iText.Layout;
 
 namespace Capstone_360s.Interfaces.IService

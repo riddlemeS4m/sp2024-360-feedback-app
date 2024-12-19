@@ -1,9 +1,9 @@
 ﻿using Capstone_360s.Models.FeedbackDb;
-using System.Collections.ObjectModel;
+using Capstone_360s.Models.Generics;
 
 namespace Capstone_360s.Data.Constants
 {
-    public class Capstone
+    public class Capstone : GenericConstants
     {
         public static readonly List<string> MetricKeys = 
         [

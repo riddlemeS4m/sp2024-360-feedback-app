@@ -1,5 +1,6 @@
 ﻿using Capstone_360s.Interfaces.IDbContext;
 using Capstone_360s.Models.FeedbackDb;
+using Microsoft.EntityFrameworkCore;
 
 namespace Capstone_360s.Services.FeedbackDb
 {
@@ -11,6 +12,9 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger = logger;
         }
 
-
+        public Organization GetByTypeAsync(string type)
+        {
+            return _dbSet.Where(x => x.Type == type).FirstOrDefault() ?? throw new Exception($"Organization '{type}'not found.");
+        }
     }
 }

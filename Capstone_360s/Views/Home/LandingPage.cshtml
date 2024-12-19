@@ -1,0 +1,78 @@
+﻿@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization;
+@inject IAuthorizationService AuthorizationService
+
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.Organization>
+
+@{
+    ViewData["Title"] = "Landing Page";
+    var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+}
+
+<h1>Choose an Organization</h1>
+
+@if(isAuthorized.Succeeded)
+{
+    <p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create New Organization</a>
+    </p>
+}
+
+@if(Model.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.Name)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Type)
+                </th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", "UploadProcess", new { organizationId = item.Id })')">
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Name)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Type)
+                    </td>
+                    <td>
+                        <a asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@item.Id">Select</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div>
+        <p>
+            <a class="btn btn-primary" asp-action="AssignUserToOrganization">Select an Organization</a>
+        </p>
+    </div>
+    <div>
+        <p>You are not currently assigned to an organization. Click 'Select an Organization' to get started.</p>
+    </div>
+}
+
+
+@section Scripts {
+
+    <script>
+        function navigateToSelect(url) {
+            window.location.href = url;
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+

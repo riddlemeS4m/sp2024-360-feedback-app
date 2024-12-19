@@ -7,43 +7,47 @@
 <h1>Organizations</h1>
 
 <p>
-    <a class="btn btn-primary" asp-action="OrganizationCreate">Create New Organization</a>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create New Organization</a>
 </p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Id)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
+
+<div class="col-md-8">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.Name)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Name)
+                </th>
+                @* <th>
                 @Html.DisplayNameFor(model => model.GDFolderId)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", new { id = item.Id })')">
-                <td>
-                    @Html.DisplayFor(modelItem => item.Id)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Name)
-                </td>
-                <td>
-                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                </td>
-                <td>
-                    <a asp-action="TimeframesIndex" asp-route-id="@item.Id">Select</a>
-                </td>
+            </th> *@
+                <th></th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", new { organizationId = item.Id })')">
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Name)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Type)
+                    </td>
+                    @* <td>
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                </td> *@
+                    <td>
+                        <a asp-asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@item.Id">Select</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</div>
 
 @section Scripts {
 

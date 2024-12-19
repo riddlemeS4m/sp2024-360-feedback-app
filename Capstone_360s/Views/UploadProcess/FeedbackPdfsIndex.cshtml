@@ -1,0 +1,69 @@
+﻿@using Capstone_360s.Models.FeedbackDb
+
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
+
+@{
+    ViewData["Title"] = "Round Feedback";
+
+    var projectId = Context.Request.Query["projectId"].ToString();
+    var roundId = Context.Request.Query["roundId"].ToString();
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+}
+
+<h1>PDFs</h1>
+@if (Model.Any())
+{
+    <p>
+        <a class="btn btn-primary" href="https://drive.google.com/drive/folders/@Model.ElementAt(0).ParentGDFolderId">View
+            Folder on Google Drive</a>
+    </p>
+
+    <div class="col-md-8">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>
+                        @nameof(FeedbackPdf.FileName)
+                    </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr onclick="navigateToSelect('https://drive.google.com/file/d/@item.GDFileId/view')">
+                        <td>
+                            @Html.DisplayFor(modelItem => item.FileName)
+                        </td>
+                        <td>
+                            <a href="https://drive.google.com/file/d/@item.GDFileId/view">View on Google Drive</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+}
+else
+{
+    <p>No PDFs found for this project.</p>
+}
+<p>
+    <a class="btn btn-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId"
+        asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
+</p>
+
+
+@section Scripts {
+    <script>
+        function navigateToSelect(url) {
+            window.location.href = url;
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

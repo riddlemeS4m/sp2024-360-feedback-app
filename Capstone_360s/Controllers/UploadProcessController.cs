@@ -1,145 +1,63 @@
-﻿using Capstone_360s.Data.Constants;
-using Capstone_360s.Interfaces.IService;
+﻿using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Models.VMs;
 using Capstone_360s.Services.FeedbackDb;
-using Capstone_360s.Services.Maps;
-using Capstone_360s.Services.PDF;
+using Capstone_360s.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Capstone_360s.Services.Configuration.Organizations;
 
 namespace Capstone_360s.Controllers
 {
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+    [Route("{organizationId}/[controller]/[action]")]
     public class UploadProcessController : Controller
     {
+        [FromRoute]
+        public string OrganizationId { get; set; }
+        public const string Name = "UploadProcess";
         private readonly IGoogleDrive _googleDriveService;
-        private readonly OrganizationService _organizationService;
-        private readonly TimeframeService _timeframeService;
-        private readonly ProjectService _projectService;
-        private readonly RoundService _roundService;
-        private readonly ProjectRoundService _projectRoundService;
-        private readonly MetricService _metricService;
-        private readonly QuestionService _questionService;
-        private readonly FeedbackService _feedbackService;
-        private readonly FeedbackPdfService _feedbackPdfService;
-        private readonly CapstoneMapToInvertedQualtrics _invertQualtricsService;
-        private readonly CapstonePdfService _pdfService;
+        private readonly FeedbackDbServiceFactory _serviceFactory;
+        private readonly CapstoneOrganizationServices _capstoneServices;
         private readonly ILogger<UploadProcessController> _logger;
-        public UploadProcessController(IGoogleDrive googleDriveService,
-            OrganizationService organizationService,
-            TimeframeService timeframeService,
-            ProjectService projectService,
-            RoundService roundService,
-            ProjectRoundService projectRoundService,
-            MetricService metricService,
-            QuestionService questionService,
-            FeedbackService feedbackService,
-            FeedbackPdfService feedbackPdfService,
-            CapstoneMapToInvertedQualtrics invertQualtricsService,
-            CapstonePdfService pdfService,
+        public UploadProcessController(
+            IGoogleDrive googleDriveService,
+            FeedbackDbServiceFactory serviceFactory,
+            CapstoneOrganizationServices capstoneServices,
             ILogger<UploadProcessController> logger) 
         { 
             _googleDriveService = googleDriveService;
-            _organizationService = organizationService;
-            _timeframeService = timeframeService;
-            _projectService = projectService;
-            _roundService = roundService;
-            _projectRoundService = projectRoundService;
-            _metricService = metricService;
-            _questionService = questionService;
-            _feedbackService = feedbackService;
-            _feedbackPdfService = feedbackPdfService;
-            _invertQualtricsService = invertQualtricsService;
-            _pdfService = pdfService;
+            _serviceFactory = serviceFactory;
+            _capstoneServices = capstoneServices;
             _logger = logger;
         }
+
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation("Starting upload process...");
 
-            var organizations = await _organizationService.GetAllAsync();
+            var organizations = await _serviceFactory.OrganizationService.GetAllAsync();
 
             _logger.LogInformation("Returning organization selection view...");
             return View(organizations);
         }
 
-        public IActionResult OrganizationCreate()
-        {
-            _logger.LogInformation("A new organization needs to be created...");
-            _logger.LogInformation("Returning organization creation view...");
-            return View();
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> OrganizationCreate([Bind(nameof(Organization.Id),nameof(Organization.Name))] Organization organization, 
-            List<string> Names, List<string> Descriptions, List<int> Mins, List<int> Maxs, List<string> Qs, List<string> Examples)
-        {
-            _logger.LogInformation("Creating a new organization...");
-            if(string.IsNullOrEmpty(organization.Name))
-            {
-                ModelState.AddModelError(nameof(Organization.Name), "Name is required");
-
-                _logger.LogInformation("Returning organization creation view with error...");
-                return View(organization);
-            }
-
-            organization.GDFolderId = await _googleDriveService.CreateFolderAsync(organization.Name, "");
-
-            await _organizationService.AddAsync(organization);
-
-            var metrics = new List<Metric>();
-            for (int i = 0; i < Names.Count; i++)
-            {
-                var metric = new Metric()
-                {
-                    Name = Names[i],
-                    Description = Descriptions[i],
-                    MinValue = Mins[i],
-                    MaxValue = Maxs[i],
-                    OrganizationId = organization.Id
-                };
-
-                metrics.Add(metric);
-            }
-
-            await _metricService.AddRange(metrics);
-
-            var questions = new List<Question>();
-            for (int i = 0; i < Qs.Count; i++)
-            {
-                var question = new Question()
-                {
-                    Q = Qs[i],
-                    Example = Examples[i],
-                    OrganizationId = organization.Id
-                };
-
-                questions.Add(question);
-            }
-
-            await _questionService.AddRange(questions);
-
-            _logger.LogInformation("Returning next view, timeframes selection view...");
-            return RedirectToAction(nameof(TimeframesIndex), new {id = organization.Id});
-        }
-
-        public async Task<IActionResult> TimeframesIndex(string id)
+        public async Task<IActionResult> TimeframesIndex()
         {
             _logger.LogInformation("Moving to the timeframes step...");
-            var timeframes = await _timeframeService.GetTimeframesByOrganizationId(id);
+            var timeframes = await _serviceFactory.TimeframeService.GetTimeframesByOrganizationId(this.OrganizationId);
 
             _logger.LogInformation("Returning timeframes selection view...");
             return View(timeframes);
         }
 
-        public IActionResult TimeframeCreate(string organizationId)
+        public IActionResult TimeframeCreate()
         {
             _logger.LogInformation("A new timeframe needs to be created...");
 
             var timeframeVM = new TimeframeCreateVM()
             {
-                OrganizationId = Guid.Parse(organizationId)
+                OrganizationId = Guid.Parse(this.OrganizationId)
             };
 
             _logger.LogInformation("Returning timeframes creation view...");
@@ -176,10 +94,10 @@ namespace Capstone_360s.Controllers
                 return View(timeframeVM);
             }
 
-            var organizationFolderId = (await _organizationService.GetByIdAsync(timeframe.OrganizationId)).GDFolderId;
+            var organizationFolderId = (await _serviceFactory.OrganizationService.GetByIdAsync(timeframe.OrganizationId)).GDFolderId;
             timeframe.GDFolderId = await _googleDriveService.CreateFolderAsync(timeframe.Name, organizationFolderId);
 
-            await _timeframeService.AddAsync(timeframe);
+            await _serviceFactory.TimeframeService.AddAsync(timeframe);
 
             if(timeframe.NoOfProjects == 0)
             {
@@ -209,25 +127,25 @@ namespace Capstone_360s.Controllers
                 projects.Add(project);
             }
 
-            await _projectService.AddRange(projects);
+            await _serviceFactory.ProjectService.AddRange(projects);
 
             _logger.LogInformation("Returning next view, projects selection view...");
             return RedirectToAction(nameof(ProjectsIndex), new { organizationId = timeframe.OrganizationId, timeframeId = timeframe.Id});
         }
 
-        public async Task<IActionResult> ProjectsIndex(string organizationId, int timeframeId)
+        public async Task<IActionResult> ProjectsIndex(int timeframeId)
         {
             _logger.LogInformation("Moving to the projects step...");
-            var projects = await _projectService.GetProjectsByTimeframeId(organizationId, timeframeId);
+            var projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId);
 
             _logger.LogInformation("Returning projects selection view...");
             return View(projects);
         }
 
-        public async Task<IActionResult> ProjectRoundCreate(string organizationId, int timeframeId)
+        public async Task<IActionResult> ProjectRoundCreate(int timeframeId)
         {
             _logger.LogInformation("Project rounds need to be created...");
-            var timeframe = await _timeframeService.GetByIdAsync(timeframeId);
+            var timeframe = await _serviceFactory.TimeframeService.GetByIdAsync(timeframeId);
             if(timeframe.NoOfRounds > 0)
             {
                 _logger.LogInformation("Returning rounds creation view...");
@@ -237,7 +155,7 @@ namespace Capstone_360s.Controllers
                 });
             }
 
-            var projects = await _projectService.GetProjectsByTimeframeId(organizationId, timeframeId);
+            var projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId);
             if(projects.Count() >  0) 
             {
                 _logger.LogInformation("Returning rounds creation view...");
@@ -254,7 +172,7 @@ namespace Capstone_360s.Controllers
         {
             _logger.LogInformation("Creating project rounds...");
 
-            var rounds = await _roundService.GetFirstNRounds(project.NoOfRounds);
+            var rounds = await _serviceFactory.RoundService.GetFirstNRounds(project.NoOfRounds);
             var roundsList = rounds.ToList();
 
             if(roundsList.Count < project.NoOfRounds)
@@ -269,7 +187,7 @@ namespace Capstone_360s.Controllers
                         });
                     }
 
-                    await _roundService.AddRange(roundsList);
+                    await _serviceFactory.RoundService.AddRange(roundsList);
                 }
                 else
                 {
@@ -284,18 +202,18 @@ namespace Capstone_360s.Controllers
                         });
                     }
 
-                    await _roundService.AddRange(roundsToMake);
+                    await _serviceFactory.RoundService.AddRange(roundsToMake);
                 }
             }
 
-            rounds = await _roundService.GetFirstNRounds(project.NoOfRounds);
+            rounds = await _serviceFactory.RoundService.GetFirstNRounds(project.NoOfRounds);
             roundsList = rounds.ToList();
             if (roundsList.Count < project.NoOfRounds)
             {
                 throw new Exception("There are not enough rounds in the database.");
             }
 
-            var projects = await _projectService.GetProjectsByTimeframeId(project.OrganizationId.ToString(), project.TimeframeId);
+            var projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(project.OrganizationId.ToString(), project.TimeframeId);
             var projectsList = projects.ToList();
 
             if(projectsList.Count() == 0 || roundsList.Count() == 0)
@@ -352,21 +270,21 @@ namespace Capstone_360s.Controllers
                 throw new Exception("Not every project has the correct amount of rounds.");
             }
 
-            await _projectRoundService.AddRange(projectRounds);
+            await _serviceFactory.ProjectRoundService.AddRange(projectRounds);
 
             _logger.LogInformation("Returning to project selection view...");
             return RedirectToAction(nameof(ProjectsIndex), new { organizationId = project.OrganizationId, timeframeId = project.TimeframeId });
         }
 
-        public async Task<IActionResult> ProjectRoundsIndex(string organizationId, int timeframeId, string projectId)
+        public async Task<IActionResult> ProjectRoundsIndex(int timeframeId, string projectId)
         {
             _logger.LogInformation("Moving to the rounds step...");
-            var projectRounds = await _projectRoundService.GetProjectRoundsByProjectId(projectId);
+            var projectRounds = await _serviceFactory.ProjectRoundService.GetProjectRoundsByProjectId(projectId);
 
             var vm = new ProjectRoundsIndexVM
             {
                 ProjectRounds = projectRounds,
-                OrganizationId = organizationId,
+                OrganizationId = this.OrganizationId,
                 TimeframeId = timeframeId,
             };
 
@@ -388,7 +306,7 @@ namespace Capstone_360s.Controllers
                 return BadRequest();
             }
 
-            var feedback = await _feedbackService.GetMultipleRoundsOfFeedbackByTimeframeIdAndRoundId(timeframeId, roundId);
+            var feedback = await _serviceFactory.FeedbackService.GetMultipleRoundsOfFeedbackByTimeframeIdAndRoundId(timeframeId, roundId);
             _logger.LogInformation($"{feedback.Count()} rows of feedback about to be mapped to {feedback.Select(x => x.RevieweeId).Distinct().Count()} recipients...");
 
             var noOfRoundsList = feedback.Select(x => new { x.ProjectId, x.Project.NoOfMembers }).Distinct().ToList();
@@ -410,7 +328,7 @@ namespace Capstone_360s.Controllers
                 throw new Exception("Unexpected number of feedback objects was returned");
             }
 
-            var invertedQualtrics = await _invertQualtricsService.MapFeedback(feedback, roundId);
+            var invertedQualtrics = await _capstoneServices.DataMap.MapFeedback(feedback, roundId);
             _logger.LogInformation($"{invertedQualtrics.Count()} feedback objects have now been mapped...");
 
             if(feedback.Count() != invertedQualtrics.Count())
@@ -418,7 +336,7 @@ namespace Capstone_360s.Controllers
                 throw new Exception("Not every feedback object has been mapped.");
             }
 
-            var pdfs = await _pdfService.GenerateCapstonePdfs(invertedQualtrics, roundId);
+            var pdfs = await _capstoneServices.PdfService.GeneratePdfs(invertedQualtrics, roundId);
             _logger.LogInformation($"{pdfs.Count()} pdfs have been generated...");
 
             if(pdfs.Count() != feedback.Select(x => x.RevieweeId).Distinct().Count())
@@ -427,7 +345,7 @@ namespace Capstone_360s.Controllers
             }
 
             var projectIds = pdfs.Select(x => x.ProjectId).Distinct().ToList();
-            var projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projectIds, roundId);
+            var projectRounds = await _serviceFactory.ProjectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projectIds, roundId);
             var projectRoundsDict = projectRounds.ToDictionary(x => x.ProjectId, x => x.GDFolderId);
             for(int i = 0; i < pdfs.Count; i++)
             {
@@ -452,10 +370,10 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            await _feedbackPdfService.AddRange(pdfs);
+            await _serviceFactory.FeedbackPdfService.AddRange(pdfs);
 
             // update feedback table to link to feedbackpdfs 
-            var feedbackPdfs = await _feedbackPdfService.GetFeedbackPdfsByProjectIdsAndRoundId(projectIds, roundId);
+            var feedbackPdfs = await _serviceFactory.FeedbackPdfService.GetFeedbackPdfsByProjectIdsAndRoundId(projectIds, roundId);
             var feedbackPdfsDict = new Dictionary<Guid, Guid>();
 
             foreach(var feedbackPdf in feedbackPdfs)
@@ -479,9 +397,16 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            await _feedbackService.UpdateRangeAsync(updatedFeedbacks);
+            await _serviceFactory.FeedbackService.UpdateRangeAsync(updatedFeedbacks);
 
             return View(new Project { NoOfRounds = roundId});
+        }
+
+        public async Task<IActionResult> FeedbackPdfsIndex(int timeframeId, string projectId, int roundId)
+        {
+            var pdfs = await _serviceFactory.FeedbackPdfService.GetFeedbackByProjectIdAndRoundId(Guid.Parse(projectId), roundId);
+
+            return View(pdfs);
         }
     }
 }

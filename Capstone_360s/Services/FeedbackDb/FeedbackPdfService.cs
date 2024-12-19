@@ -13,6 +13,12 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger = logger;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="projectId"></param>
+        /// <param name="roundId"></param>
+        /// <returns>An enumerable list of FeedbackPdfs, including Rounds, Projects, and Users</returns>
         public async Task<IEnumerable<FeedbackPdf>> GetFeedbackByProjectIdAndRoundId(Guid projectId, int roundId)
         {
             _logger.LogInformation("Getting feedback pdfs by project id and round id...");

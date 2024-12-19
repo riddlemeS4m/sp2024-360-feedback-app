@@ -5,11 +5,25 @@
 <div class="text-center">
     @if (User.Identity?.IsAuthenticated ?? false)
     {
-        <h1 class="display-4">Welcome, @User.Identity.Name</h1>
-    }
+        <h1 class="display-4">Welcome, @User.Claims.Where(x => x.Type == "name").FirstOrDefault().Value</h1>
+        <div class="text-center">
+            <p>
+                <a class="btn btn-primary" asp-controller="Home" asp-action="LandingPage">View My Organizations</a>
+                @* <a class="btn btn-secondary" asp-controller="Account" asp-action="IdentifyLocalUser">Find Azure Id</a> *@
+                <a class="btn btn-success" asp-controller="Account" asp-action="Logout">Logout</a>
+
+            </p>
+        </div>
+    } 
     else
     {
         <h1 class="display-4">Welcome</h1>
+        <div>
+            <p><a class="btn btn-success" asp-controller="Account" asp-action="Login">Login</a></p>
+        </div>
     }
-    <p><a class="btn btn-primary" asp-controller="UploadProcess" asp-action="Index">Start Setup Process</a></p>
+    
+@*     <div class="index-image-container">
+        <img src="~/favicon.png" alt="Hewson Hall in the spiring" style="width: 80%">
+    </div> *@
 </div>

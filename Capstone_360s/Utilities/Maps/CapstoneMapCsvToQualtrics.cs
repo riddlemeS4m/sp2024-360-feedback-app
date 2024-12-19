@@ -1,8 +1,9 @@
-﻿using Capstone_360s.Models.CapstoneRoster;
+﻿using Capstone_360s.Models.Organizations.Capstone;
 using CsvHelper.Configuration;
 
-namespace Capstone_360s.Utilities
+namespace Capstone_360s.Utilities.Maps
 {
+    [Organization("Capstone")]
     public class CapstoneMapCsvToQualtrics : ClassMap<Qualtrics>
     {
         public CapstoneMapCsvToQualtrics()
@@ -102,7 +103,7 @@ namespace Capstone_360s.Utilities
             Map(m => m.PerformanceMember6).Name("Q39_5");
             Map(m => m.StrengthsMember6).Name("Q41");
             Map(m => m.GrowthAreasMember6).Name("Q42");
-            Map(m => m.CommentsMember6).Name("Q43");            
+            Map(m => m.CommentsMember6).Name("Q43");
 
             // General survey scores and faculty sponsor information
             Map(m => m.Score).Name("SC0");

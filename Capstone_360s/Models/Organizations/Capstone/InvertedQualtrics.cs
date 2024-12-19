@@ -1,8 +1,8 @@
 ﻿using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Models.Survey;
+using Capstone_360s.Models.Generics;
 using static iText.StyledXmlParser.Jsoup.Select.Evaluator;
 
-namespace Capstone_360s.Models.CapstoneRoster
+namespace Capstone_360s.Models.Organizations.Capstone
 {
     public class InvertedQualtrics : GenericInversion
     {
@@ -27,9 +27,9 @@ namespace Capstone_360s.Models.CapstoneRoster
         public Dictionary<string, int> Ratings { get; set; }
         public Dictionary<string, string> Questions { get; set; }
 
-        public InvertedQualtrics() 
+        public InvertedQualtrics()
         {
-            this.FullName = this.FirstName + " " + this.LastName;
+            FullName = FirstName + " " + LastName;
         }
 
         public override string ToString()

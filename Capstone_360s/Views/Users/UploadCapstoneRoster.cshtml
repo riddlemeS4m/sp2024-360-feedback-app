@@ -4,14 +4,14 @@
 @{
     ViewData["Title"] = "Upload Qualtrics Data";
 
-    var organizationId = Context.Request.Query["organizationId"].ToString();
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
 }
 
 <h1>Qualtrics Data Upload</h1>
 <hr />
 <div class="row">
-    <div class="col-md-10">
+    <div class="col-md-3">
         <form id="profile-form" method="post" enctype="multipart/form-data">
             <input type="hidden" name="organizationId" value="@organizationId" />
             <input type="hidden" name="timeframeId" value="@timeframeId" />

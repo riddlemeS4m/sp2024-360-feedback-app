@@ -1,6 +1,6 @@
-﻿using Capstone_360s.Models.Survey;
+﻿using Capstone_360s.Models.Generics;
 
-namespace Capstone_360s.Models.CapstoneRoster
+namespace Capstone_360s.Models.Organizations.Capstone
 {
     public class Qualtrics : GenericSurvey
     {

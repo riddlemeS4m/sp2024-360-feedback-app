@@ -75,7 +75,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("TimeframeId");
 
-                    b.ToTable("feedback", (string)null);
+                    b.ToTable("feedback");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.FeedbackPdf", b =>
@@ -116,7 +116,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("pdffiles", (string)null);
+                    b.ToTable("pdffiles");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Metric", b =>
@@ -159,7 +159,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("metrics", (string)null);
+                    b.ToTable("metrics");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.MetricResponse", b =>
@@ -177,7 +177,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("FeedbackId");
 
-                    b.ToTable("metricresponses", (string)null);
+                    b.ToTable("metricresponses");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Organization", b =>
@@ -194,9 +194,13 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
-                    b.ToTable("organizations", (string)null);
+                    b.ToTable("organizations");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Project", b =>
@@ -247,7 +251,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId", "TimeframeId");
 
-                    b.ToTable("projects", (string)null);
+                    b.ToTable("projects");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.ProjectRound", b =>
@@ -271,7 +275,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("RoundId");
 
-                    b.ToTable("projectrounds", (string)null);
+                    b.ToTable("projectrounds");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Question", b =>
@@ -305,7 +309,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("questions", (string)null);
+                    b.ToTable("questions");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.QuestionResponse", b =>
@@ -324,7 +328,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("FeedbackId");
 
-                    b.ToTable("questionresponses", (string)null);
+                    b.ToTable("questionresponses");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Round", b =>
@@ -342,7 +346,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasKey("Id");
 
-                    b.ToTable("rounds", (string)null);
+                    b.ToTable("rounds");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.TeamMember", b =>
@@ -357,7 +361,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("teammembers", (string)null);
+                    b.ToTable("teammembers");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Timeframe", b =>
@@ -398,7 +402,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("timeframes", (string)null);
+                    b.ToTable("timeframes");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.User", b =>
@@ -417,9 +421,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<bool>("IsPOC")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -428,7 +429,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid?>("MicrosoftId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("OrganizationId")
+                    b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
@@ -437,7 +438,28 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.UserOrganization", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("AddedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("RemovedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("userorganizations");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Feedback", b =>
@@ -660,11 +682,28 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                 {
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Organization", "Organization")
                         .WithMany()
+                        .HasForeignKey("OrganizationId");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.UserOrganization", b =>
+                {
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.Organization", "Organization")
+                        .WithMany()
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Organization");
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

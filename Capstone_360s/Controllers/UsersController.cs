@@ -1,58 +1,39 @@
 ﻿using Capstone_360s.Data.Constants;
+using Capstone_360s.Interfaces.IOrganization;
 using Capstone_360s.Interfaces.IService;
-using Capstone_360s.Models.CapstoneRoster;
 using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Services.CSV;
+using Capstone_360s.Models.Organizations.Capstone;
 using Capstone_360s.Services.FeedbackDb;
+using Capstone_360s.Services.Identity;
 using Capstone_360s.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Capstone_360s.Services.Configuration.Organizations;
 
 namespace Capstone_360s.Controllers
 {
+    [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+    [Route("{organizationId}/[controller]/[action]")]
     public class UsersController : Controller
     {
-        private readonly CapstoneCsvService _capstoneCsvService;
+        [FromRoute]
+        public string OrganizationId { get; set; }
+        public const string Name = "Users";
         private readonly IGoogleDrive _googleDriveService;
-        private readonly UserService _userService;
-        private readonly ProjectService _projectService;
-        private readonly ProjectRoundService _projectRoundService;
-        private readonly TeamService _teamService;
-        private readonly TimeframeService _timeframeService;
-        private readonly MetricService _metricService;
-        private readonly QuestionService _questionService;
-        private readonly FeedbackService _feedbackService;
-        private readonly MetricResponseService _metricResponseService;
-        private readonly QuestionResponseService _questionResponseService;
-        private readonly RoundService _roundService;
+        private readonly FeedbackDbServiceFactory _serviceFactory;
+        //private readonly IOrganizationServiceFactory _organizationServiceFactory;
+        //private IOrganizationServicesWrapper _organizationServices;
+        private readonly CapstoneOrganizationServices _capstoneServices;
         private readonly ILogger<UsersController> _logger;
-        public UsersController(CapstoneCsvService csvService, 
-            IGoogleDrive googleDriveService,
-            UserService userService,
-            ProjectService projectService,
-            ProjectRoundService projectRoundService,
-            TeamService teamService,
-            TimeframeService timeframeService,
-            MetricService metricService,
-            QuestionService questionService,
-            FeedbackService feedbackService,
-            MetricResponseService metricResponseService,
-            QuestionResponseService questionResponseService,
-            RoundService roundService,
-            ILogger<UsersController> logger)
-        {
-            _capstoneCsvService = csvService;
+        public UsersController(IGoogleDrive googleDriveService,
+            FeedbackDbServiceFactory serviceFactory,
+            IOrganizationServiceFactory organizationServiceFactory,
+            CapstoneOrganizationServices capstoneServices,
+            ILogger<UsersController> logger) 
+        { 
             _googleDriveService = googleDriveService;
-            _userService = userService;
-            _projectService = projectService;
-            _projectRoundService = projectRoundService;
-            _teamService = teamService;
-            _timeframeService = timeframeService;
-            _metricService = metricService;
-            _questionService = questionService;
-            _feedbackService = feedbackService;
-            _metricResponseService = metricResponseService;
-            _questionResponseService = questionResponseService;
-            _roundService = roundService;
+            _serviceFactory = serviceFactory;
+            _capstoneServices = capstoneServices;
             _logger = logger;
         }
 
@@ -61,7 +42,7 @@ namespace Capstone_360s.Controllers
             return View();
         }
 
-        public IActionResult UploadCapstoneRoster(string organizationId, int timeframeId)
+        public IActionResult UploadCapstoneRoster(int timeframeId)
         {
             return View();
         }
@@ -69,9 +50,9 @@ namespace Capstone_360s.Controllers
         [HttpPost]
         public async Task<IActionResult> UploadCapstoneRoster(IFormFile roster, DateTime filterDate, int roundId)
         {
-            var organizationId = Guid.Parse(Request.Query["organizationId"]);
+            var organizationId = Guid.Parse(OrganizationId);
             var timeframeId = int.Parse(Request.Query["timeframeId"]);
-            var timeframe = await _timeframeService.GetByIdAsync(timeframeId);
+            var timeframe = await _serviceFactory.TimeframeService.GetByIdAsync(timeframeId);
 
             _logger.LogInformation("Uploading roster...");
 
@@ -80,7 +61,7 @@ namespace Capstone_360s.Controllers
                 return View();
             }
 
-            var round = await _roundService.GetByIdAsync(roundId);
+            var round = await _serviceFactory.RoundService.GetByIdAsync(roundId);
 
             if(round == null || roundId > timeframe.NoOfRounds)
             {
@@ -88,7 +69,7 @@ namespace Capstone_360s.Controllers
             }
 
             // filter date parameter not working quite right yet
-            var data = _capstoneCsvService.ReadSurveyResponsesWithFilterDate(roster, Capstone.ExpectedHeaders, nameof(Qualtrics.StartDate), filterDate, Capstone.CustomDateFilter).ToList();
+            var data = _capstoneServices.CsvService.ReadSurveyResponsesWithFilterDate(roster, Capstone.ExpectedHeaders, nameof(Qualtrics.StartDate), filterDate, Capstone.CustomDateFilter).ToList();
 
             if(data.Count == 0)
             {
@@ -97,7 +78,7 @@ namespace Capstone_360s.Controllers
             }
 
             // check that all metrics are in the database, and add ones that aren't
-            var metrics = await _metricService.GetMetricsByOrganizationId(organizationId);
+            var metrics = await _serviceFactory.MetricService.GetMetricsByOrganizationId(organizationId);
             var metricsToAdd = Capstone.CapstoneMetrics.Where(x => !metrics.Any(y => y.OriginalMetricId == x));
             var defaultMetrics = Capstone.GetDefaultCapstoneMetrics(organizationId);
 
@@ -105,16 +86,16 @@ namespace Capstone_360s.Controllers
             {
                 foreach(string metric in metricsToAdd)
                 {
-                    await _metricService.AddAsync(defaultMetrics.Where(x => x.OriginalMetricId == metric).FirstOrDefault());
+                    await _serviceFactory.MetricService.AddAsync(defaultMetrics.Where(x => x.OriginalMetricId == metric).FirstOrDefault());
                 }
             }
 
-            defaultMetrics = await _metricService.GetDefaultCapstoneMetrics(organizationId, Capstone.CapstoneMetrics.ToList());
+            defaultMetrics = await _serviceFactory.MetricService.GetDefaultCapstoneMetrics(organizationId, Capstone.CapstoneMetrics.ToList());
 
-            metrics = await _metricService.GetMetricsByOrganizationId(organizationId);
+            metrics = await _serviceFactory.MetricService.GetMetricsByOrganizationId(organizationId);
 
             // check that all questions are in the database, and add ones that aren't
-            var questions = await _questionService.GetQuestionsByOrganizationId(organizationId);
+            var questions = await _serviceFactory.QuestionService.GetQuestionsByOrganizationId(organizationId);
             var questionsToAdd = Capstone.CapstoneQuestions.Where(x => !questions.Any(y => y.OriginalQuestionId == x));
             var defaultQuestions = Capstone.GetDefaultCapstoneQuestions(organizationId);
 
@@ -122,35 +103,37 @@ namespace Capstone_360s.Controllers
             {
                 foreach(string question in questionsToAdd)
                 {
-                    await _questionService.AddAsync(defaultQuestions.Where(x => x.OriginalQuestionId == question).FirstOrDefault());
+                    await _serviceFactory.QuestionService.AddAsync(defaultQuestions.Where(x => x.OriginalQuestionId == question).FirstOrDefault());
                 }
             }
 
-            defaultQuestions = await _questionService.GetDefaultCapstoneQuestions(organizationId, Capstone.CapstoneQuestions.Take(3).ToList());
+            defaultQuestions = await _serviceFactory.QuestionService.GetDefaultCapstoneQuestions(organizationId, Capstone.CapstoneQuestions.Take(3).ToList());
 
             // check that all users in the roster are in the database, and add ones that aren't
-            var users = await _userService.GetUsersByOrganizationId(organizationId);
+            var usersUO = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organizationId);
+            var users = usersUO.Select(x => x.User).ToList();
             var usersToAdd = data.Where(x => !users.Any(u => u.Email == x.Email)).ToList();
             if (usersToAdd.Count != 0)
             {
-                var usersList = new List<User>();
+                var usersList = new List<Capstone_360s.Models.FeedbackDb.User>();
                 foreach(var user in usersToAdd)
                 {
-                    usersList.Add(new User
+                    usersList.Add(new Capstone_360s.Models.FeedbackDb.User
                     {
                         FirstName = user.FirstName.Trim(),
                         LastName = user.LastName.Trim(),
                         Email = user.Email.Trim(),
-                        OrganizationId = organizationId
+                        //OrganizationId = organizationId
                     });
                 }
-                await _userService.AddRange(usersList);
+                await _serviceFactory.UserService.AddRange(usersList);
             }
 
-            users = await _userService.GetUsersByOrganizationId(organizationId);
+            usersUO = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organizationId);
+            users = usersUO.Select(x => x.User).ToList();
 
             // check that all projects in the roster are in the database, and add ones that aren't
-            var projects = await _projectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
+            var projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
             var projectsToAdd = data.Where(x => !projects.Any(p => p.Name.Trim().Contains(x.TeamName.Trim(), StringComparison.CurrentCultureIgnoreCase)))
                 .Select(x => x.TeamName)
                 .Distinct() 
@@ -173,13 +156,13 @@ namespace Capstone_360s.Controllers
                     });
                 }
 
-                await _projectService.AddRange(projectsList);
+                await _serviceFactory.ProjectService.AddRange(projectsList);
             }
 
-            projects = await _projectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
+            projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
 
             // check if team members are assigned to each user, otherwise add team members to projects
-            var teamMembers = await _teamService.GetTeamMembersByListOfProjectIds(projects.Select(x => x.Id).ToList());
+            var teamMembers = await _serviceFactory.TeamService.GetTeamMembersByListOfProjectIds(projects.Select(x => x.Id).ToList());
             var teamMembersDict = teamMembers.ToDictionary(x => x.User.Email, x => x.Project.Name);
             var dataRolesDict = data.ToDictionary(x => x.Email, x => x.TeamName.Trim().ToLower());
             var projectsDict = projects.ToDictionary(x => x.Name.Trim().ToLower(), x => x.Id);
@@ -199,10 +182,10 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            await _teamService.AddRange(teamMembersToAdd);
+            await _serviceFactory.TeamService.AddRange(teamMembersToAdd);
 
             // check that each project has a child folder for each round, otherwise create child folder and project round object
-            var projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projects.Select(x => x.Id).ToList(), roundId);
+            var projectRounds = await _serviceFactory.ProjectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projects.Select(x => x.Id).ToList(), roundId);
             var projectRoundsDict = projectRounds.ToDictionary(x => x.ProjectId, x => x.RoundId);
             var projectRoundsToAdd = new List<ProjectRound>();
 
@@ -220,11 +203,11 @@ namespace Capstone_360s.Controllers
                 }
             }
 
-            await _projectRoundService.AddRange(projectRoundsToAdd);
+            await _serviceFactory.ProjectRoundService.AddRange(projectRoundsToAdd);
 
             // finally, iterate through project.members map each teammember to a new feedback object
-            projects = await _projectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
-            teamMembers = await _teamService.GetTeamMembersByListOfProjectIds(projects.Select(x => x.Id).ToList());
+            projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
+            teamMembers = await _serviceFactory.TeamService.GetTeamMembersByListOfProjectIds(projects.Select(x => x.Id).ToList());
             //projectRounds = await _projectRoundService.GetProjectRoundsByListOfProjectIdsAndRoundId(projects.Select(x => x.Id).ToList(), roundId);
 
             var feedback = new List<Feedback>();
@@ -261,7 +244,7 @@ namespace Capstone_360s.Controllers
 
                 for (int j = 0; j < project.NoOfMembers; j++)
                 {
-                    var row = rows.ElementAt(j);
+                    var row = (Qualtrics)rows.ElementAt(j);
 
                     // Self Feedback
                     var selfFeedback = CreateFeedback(userDicts[row.Email], userNamesDict[row.FirstName.Trim() + " " + row.LastName.Trim()], project.Id, roundId, timeframeId, row.ResponseId);
@@ -330,26 +313,26 @@ namespace Capstone_360s.Controllers
 
             }
 
-            await _feedbackService.AddRange(feedback);
-            await _metricResponseService.AddRange(metricResponses);
-            await _questionResponseService.AddRange(questionResponses);
+            await _serviceFactory.FeedbackService.AddRange(feedback);
+            await _serviceFactory.MetricResponseService.AddRange(metricResponses);
+            await _serviceFactory.QuestionResponseService.AddRange(questionResponses);
 
             _logger.LogInformation($"{data.Count} rows were read and mapped, returning to home screen...");
             //return RedirectToAction(nameof(UploadProcessController.ProjectRoundCreate), "UploadProcess", new { organizationId = organizationId, timeframeId = timeframeId });
             return RedirectToAction(nameof(UploadProcessController.CreatePdfs), "UploadProcess", new { timeframeId = timeframeId, roundId = roundId });
         }
 
-        public async Task<IActionResult> OrganizationUsersIndex(string organizationId)
+        public async Task<IActionResult> OrganizationUsersIndex()
         {
             return View();
         }
 
-        public async Task<IActionResult> POCAssignment(string organizationId)
+        public async Task<IActionResult> POCAssignment()
         {
             return View();
         }
 
-        public async Task<IActionResult> TeamAssignments(string organizationId, int timeframeId)
+        public async Task<IActionResult> TeamAssignments(int timeframeId)
         {
             return View();
         }

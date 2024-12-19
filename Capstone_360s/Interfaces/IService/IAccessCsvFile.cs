@@ -1,11 +1,11 @@
-﻿using Capstone_360s.Models.FeedbackDb;
+﻿using Capstone_360s.Models.Generics;
 
 namespace Capstone_360s.Interfaces.IService
 {
-    public interface IAccessCsvFile<T> where T : class
+    public interface IAccessCsvFile<TSurvey> where TSurvey : class
     {
         public delegate bool FilterDateFunc(string datefield, DateTime filterDate);
-        public IEnumerable<T> ReadSurveyResponses(IFormFile file, IEnumerable<string> expectedHeaders);
-        public IEnumerable<T> ReadSurveyResponsesWithFilterDate(IFormFile file, IEnumerable<string> expectedHeaders, string dateField, DateTime filterDate, FilterDateFunc filterDateFunc);
+        public IEnumerable<TSurvey> ReadSurveyResponses(IFormFile file, IEnumerable<string> expectedHeaders);
+        public IEnumerable<TSurvey> ReadSurveyResponsesWithFilterDate(IFormFile file, IEnumerable<string> expectedHeaders, string dateField, DateTime filterDate, FilterDateFunc filterDateFunc);
     }
 }

@@ -1,10 +1,16 @@
-﻿using iText.Layout;
+﻿using Capstone_360s.Models.FeedbackDb;
+using Capstone_360s.Models.Generics;
+using Capstone_360s.Models.Organizations.Capstone;
+using iText.Layout;
 
 namespace Capstone_360s.Interfaces.IService
 {
-    public interface IWritePdf<T> where T : class
+    public interface IWritePdf<TDocument, TInversion> 
+        where TDocument : class
+        where TInversion : class
     {
-        public delegate void WritePdfContent<T>(Document document, T documentMaterial);
-        public Task<byte[]> WritePdfAsync(WritePdfContent<T> pdfWriter, T documentMaterial);
+        public delegate void WritePdfContent<TDocument>(Document document, TDocument documentMaterial);
+        public Task<List<FeedbackPdf>> GeneratePdfs(IEnumerable<TInversion> invertedQualtrics, int currentRoundId);
+        public Task<byte[]> WritePdfAsync(WritePdfContent<TDocument> pdfWriter, TDocument documentMaterial);
     }
 }

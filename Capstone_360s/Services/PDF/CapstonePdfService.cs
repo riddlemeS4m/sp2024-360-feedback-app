@@ -1,38 +1,101 @@
 ﻿using Capstone_360s.Data.Constants;
-using Capstone_360s.Models.CapstoneRoster;
+using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
+using Capstone_360s.Models.Organizations.Capstone;
 using Capstone_360s.Services.FeedbackDb;
-using Capstone_360s.Services.Maps;
+using Capstone_360s.Utilities;
+using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 
 namespace Capstone_360s.Services.PDF
 {
-    public class CapstonePdfService : GenericPdfService<DocumentToPrint>
+    [Organization("Capstone")]
+    public class CapstonePdfService : IWritePdf<DocumentToPrint, InvertedQualtrics>
     {
-        private readonly RoundService _roundService;
-        private readonly FeedbackService _feedbackService;
-        private readonly UserService _userService;
-        private readonly CapstoneMapToInvertedQualtrics _invertQualtricsService;
+        private readonly FeedbackDbServiceFactory _serviceFactory;
+        private readonly IMapFeedback<InvertedQualtrics> _invertQualtricsService;
         private readonly ILogger<CapstonePdfService> _logger;
-        public CapstonePdfService(RoundService roundService,
-            FeedbackService feedbackService, 
-            UserService userService,
-            CapstoneMapToInvertedQualtrics invertQualtricsService, 
-            ILogger<CapstonePdfService> logger) : base(logger)
+        public CapstonePdfService(FeedbackDbServiceFactory serviceFactory,
+            IMapFeedback<InvertedQualtrics> invertQualtricsService, 
+            ILogger<CapstonePdfService> logger)
         {
-            _roundService = roundService;
-            _feedbackService = feedbackService;
-            _userService = userService;
+            _serviceFactory = serviceFactory;
             _invertQualtricsService = invertQualtricsService;
             _logger = logger;
+        }        
+
+        public async Task<List<FeedbackPdf>> GeneratePdfs(IEnumerable<InvertedQualtrics> invertedQualtrics, int currentRoundId)
+        {
+            ArgumentNullException.ThrowIfNull(invertedQualtrics);
+
+            if(currentRoundId == 0)
+            {
+                throw new Exception($"'{nameof(currentRoundId)}' cannot be empty.");
+            }
+
+            var filesToReturn = new List<FeedbackPdf>();
+            var documentsToReturn = new List<byte[]>();
+
+            var documentsToPrint = await MapInvertedQualtricsToDocuments(invertedQualtrics, currentRoundId);
+            var documentsToPrintList = documentsToPrint.OrderBy(x => x.Email).ToList();
+
+            var userEmails = documentsToPrint.Select(x => x.Email).ToList();
+            var users = await _serviceFactory.UserService.GetUsersByListOfEmails(userEmails);
+            var usersList = users.OrderBy(x => x.Email).ToList();
+
+            if(usersList.Count != documentsToPrintList.Count)
+            {
+                throw new Exception("Not every document has a valid user.");
+            }
+            
+            for ( int i = 0; i < documentsToPrintList.Count; i++)
+            {
+                filesToReturn.Add(new FeedbackPdf()
+                {
+                    UserId = usersList[i].Id,
+                    User = usersList[i],
+                    ProjectId = documentsToPrintList[i].ProjectId,
+                    RoundId = documentsToPrintList[i].RoundNumber,
+                    FileName = documentsToPrintList[i].FullName,
+                    Data = await WritePdfAsync(IndividualCapstonePdf, documentsToPrintList[i])
+                });
+            }   
+            
+            return filesToReturn;
         }
-        public async Task<IEnumerable<DocumentToPrint>> MapInvertedQualtricsToDocuments(IEnumerable<InvertedQualtrics> feedbackList, int currentRoundId)
+
+        public async Task<byte[]> WritePdfAsync(IWritePdf<DocumentToPrint, InvertedQualtrics>.WritePdfContent<DocumentToPrint> pdfWriter, DocumentToPrint documentContent)
+        {
+            _logger.LogInformation("Writing PDF...");
+
+            // Create a MemoryStream to hold the PDF in memory
+            using var memoryStream = new MemoryStream();
+
+            // Initialize PDF writer and document
+            var writer = new PdfWriter(memoryStream);
+            var pdf = new PdfDocument(writer);
+            var document = new Document(pdf);
+
+            // Start writing the pdf
+
+            pdfWriter(document, documentContent);
+
+            // Stop writing the pdf
+
+            // Close document
+            document.Close();
+
+            // Return the PDF as a byte array
+            return memoryStream.ToArray();
+        }
+
+        private async Task<IEnumerable<DocumentToPrint>> MapInvertedQualtricsToDocuments(IEnumerable<InvertedQualtrics> feedbackList, int currentRoundId)
         {
             ArgumentNullException.ThrowIfNull(feedbackList);
 
-            if(currentRoundId == 0)
+            if (currentRoundId == 0)
             {
                 throw new Exception("Current round id cannot be 0.");
             }
@@ -41,7 +104,7 @@ namespace Capstone_360s.Services.PDF
 
             // Create dictionary to store feedback for each round
             var dict = new Dictionary<int, List<InvertedQualtrics>>();
-            for(int i = currentRoundId; i > 0; i--)
+            for (int i = currentRoundId; i > 0; i--)
             {
                 var roundFeedback = feedbackList.Where(x => x.Round.Id == i).ToList() ?? new List<InvertedQualtrics>();
                 dict.Add(i, roundFeedback);
@@ -52,14 +115,14 @@ namespace Capstone_360s.Services.PDF
             // var projectRoundFolderIds = _projectRoundService.GetByProjectIdsAndRoundId(projectIds, roundId)
 
             // If feedback for a round is not found, get feedback from the database
-            for(int i = currentRoundId; i > 0; i--)
+            for (int i = currentRoundId; i > 0; i--)
             {
-                if(!dict.TryGetValue(i, out List<InvertedQualtrics> bogusList))
+                if (!dict.TryGetValue(i, out List<InvertedQualtrics> bogusList))
                 {
-                    var oldRoundFeedback = await _feedbackService.GetFeedbackByTimeframeIdAndRoundId(feedbackList.ElementAt(0).Timeframe.Id, i);
+                    var oldRoundFeedback = await _serviceFactory.FeedbackService.GetFeedbackByTimeframeIdAndRoundId(feedbackList.ElementAt(0).Timeframe.Id, i);
                     var oldRoundFeedbackList = oldRoundFeedback.ToList();
 
-                    if(oldRoundFeedbackList.Count == 0)
+                    if (oldRoundFeedbackList.Count == 0)
                     {
                         throw new Exception($"Was unable to get feedback for round {i}");
                     }
@@ -73,7 +136,7 @@ namespace Capstone_360s.Services.PDF
             // Create nested dict with round -> email -> individual feedback object
             // so each email still has several feedback objects associated with it
             var biggerDict = new Dictionary<int, Dictionary<string, List<InvertedQualtrics>>>();
-            foreach(var item in dict)
+            foreach (var item in dict)
             {
                 var aggregatedFeedback = AggregateFeedbackByPerson(item.Value);
                 biggerDict[item.Key] = aggregatedFeedback;
@@ -81,13 +144,13 @@ namespace Capstone_360s.Services.PDF
 
             var numberOfRounds = biggerDict.Keys.Count;
 
-            if(numberOfRounds != currentRoundId)
+            if (numberOfRounds != currentRoundId)
             {
                 throw new Exception("The algorithm fetched data for more rounds than it was asked to.");
             }
 
             string[] rounds = new string[numberOfRounds];
-            var stringRounds = await _roundService.GetFirstNRounds(numberOfRounds);
+            var stringRounds = await _serviceFactory.RoundService.GetFirstNRounds(numberOfRounds);
             rounds = stringRounds.OrderBy(x => x.Id).Select(x => x.Name).ToArray();
 
             var users = biggerDict[currentRoundId].Keys ?? throw new Exception("'users' is null.");
@@ -104,7 +167,8 @@ namespace Capstone_360s.Services.PDF
                 try
                 {
                     user = users.ElementAt(j);
-                } catch
+                }
+                catch
                 {
                     throw new Exception($"There is not a '{j}' element in 'users'");
                 }
@@ -128,7 +192,7 @@ namespace Capstone_360s.Services.PDF
                 string[] improvements = new string[thisUsersFirstFeedback.Project.NoOfMembers];
                 string[] comments = new string[thisUsersFirstFeedback.Project.NoOfMembers];
 
-                for(int k = 1; k <= numberOfRounds; k++)
+                for (int k = 1; k <= numberOfRounds; k++)
                 {
                     var allRoundFeedback = biggerDict[k] ?? throw new Exception($"Super dictionary does not have key for round {k}");
                     var allRoundFeedbackForUser = allRoundFeedback[user] ?? throw new Exception($"User '{user}' was not found in round {k}");
@@ -139,12 +203,12 @@ namespace Capstone_360s.Services.PDF
                     double partScore = 0;
                     double perfScore = 0;
 
-                    if(allRoundFeedbackForUser.Count != thisUsersFirstFeedback.Project.NoOfMembers)
+                    if (allRoundFeedbackForUser.Count != thisUsersFirstFeedback.Project.NoOfMembers)
                     {
                         throw new Exception($"User {user} has more submissions that team members.");
                     }
 
-                    for(int l = 0; l < allRoundFeedbackForUser.Count; l++)
+                    for (int l = 0; l < allRoundFeedbackForUser.Count; l++)
                     {
                         if (allRoundFeedbackForUser[l].ReviewerEmail == user)
                         {
@@ -164,7 +228,7 @@ namespace Capstone_360s.Services.PDF
                         }
 
                         // only needs to be set the last time through the k loop
-                        if(k == numberOfRounds)
+                        if (k == numberOfRounds)
                         {
                             strengths[l] = allRoundFeedbackForUser[l].Questions[Capstone.Strengths];
                             improvements[l] = allRoundFeedbackForUser[l].Questions[Capstone.Improvements];
@@ -207,7 +271,7 @@ namespace Capstone_360s.Services.PDF
 
                 }
 
-                foreach(string value in technical)
+                foreach (string value in technical)
                 {
                     if (value == null)
                     {
@@ -242,45 +306,6 @@ namespace Capstone_360s.Services.PDF
             return list;
         }
 
-        public async Task<List<FeedbackPdf>> GenerateCapstonePdfs(IEnumerable<InvertedQualtrics> invertedQualtrics, int currentRoundId)
-        {
-            ArgumentNullException.ThrowIfNull(invertedQualtrics);
-
-            if(currentRoundId == 0)
-            {
-                throw new Exception($"'{nameof(currentRoundId)}' cannot be empty.");
-            }
-
-            var filesToReturn = new List<FeedbackPdf>();
-            var documentsToReturn = new List<byte[]>();
-
-            var documentsToPrint = await MapInvertedQualtricsToDocuments(invertedQualtrics, currentRoundId);
-            var documentsToPrintList = documentsToPrint.OrderBy(x => x.Email).ToList();
-
-            var userEmails = documentsToPrint.Select(x => x.Email).ToList();
-            var users = await _userService.GetUsersByListOfEmails(userEmails);
-            var usersList = users.OrderBy(x => x.Email).ToList();
-
-            if(usersList.Count != documentsToPrintList.Count)
-            {
-                throw new Exception("Not every document has a valid user.");
-            }
-            
-            for ( int i = 0; i < documentsToPrintList.Count; i++)
-            {
-                filesToReturn.Add(new FeedbackPdf()
-                {
-                    UserId = usersList[i].Id,
-                    User = usersList[i],
-                    ProjectId = documentsToPrintList[i].ProjectId,
-                    RoundId = documentsToPrintList[i].RoundNumber,
-                    FileName = documentsToPrintList[i].FullName,
-                    Data = await WritePdfAsync(IndividualCapstonePdf, documentsToPrintList[i])
-                });
-            }   
-            
-            return filesToReturn;
-        }
 
         private static ListItem CreateSkillSetListItem(string skill, int tabs, params string[] values)
         {
@@ -309,15 +334,45 @@ namespace Capstone_360s.Services.PDF
             return new ListItem(itemString);
         }
 
-        public void IndividualCapstonePdf(Document document, DocumentToPrint documentMaterial)
+        private static List CreateList(params string[] values)
+        {
+            var listItems = new List().SetSymbolIndent(12).SetListSymbol("\u2022");
+            
+            foreach(var value in values)
+            {
+                listItems.Add(new ListItem(value + "\n"));
+            }
+            return listItems;
+        }
+
+        private Dictionary<string, List<InvertedQualtrics>> AggregateFeedbackByPerson(IEnumerable<InvertedQualtrics> invertedQualtrics)
+        {
+            var list = invertedQualtrics.ToList();
+            list.Sort((x,y) => x.Email.CompareTo(y.Email));
+            var aggregatedFeedbackByPerson = new Dictionary<string, List<InvertedQualtrics>>();
+            foreach (var feedback in list)
+            {
+                if (aggregatedFeedbackByPerson.TryGetValue(feedback.Email, out List<InvertedQualtrics>? value))
+                {
+                    value.Add(feedback);
+                }
+                else
+                {
+                    aggregatedFeedbackByPerson.Add(feedback.Email, [feedback]);
+                }
+            }
+            return aggregatedFeedbackByPerson;
+        }
+
+        private void IndividualCapstonePdf(Document document, DocumentToPrint documentMaterial)
         {
             // Identifying information
             document.Add(new Paragraph(
                 documentMaterial.FullName + "\n" +
                 documentMaterial.Email + "\n" +
                 documentMaterial.ProjectName + "\n" +
-                documentMaterial.TimeframeName + " " + 
-                documentMaterial.RoundName + " " + 
+                documentMaterial.TimeframeName + " " +
+                documentMaterial.RoundName + " " +
                 documentMaterial.Organization
             ).SetTextAlignment(TextAlignment.LEFT).SetFontSize(12));
 
@@ -350,36 +405,6 @@ namespace Capstone_360s.Services.PDF
             // Add Additional Comments
             document.Add(new Paragraph("\nAdditional Comments:\n"));
             document.Add(CreateList(documentMaterial.Comments));
-        }
-
-        private static List CreateList(params string[] values)
-        {
-            var listItems = new List().SetSymbolIndent(12).SetListSymbol("\u2022");
-            
-            foreach(var value in values)
-            {
-                listItems.Add(new ListItem(value + "\n"));
-            }
-            return listItems;
-        }
-
-        private Dictionary<string, List<InvertedQualtrics>> AggregateFeedbackByPerson(IEnumerable<InvertedQualtrics> invertedQualtrics)
-        {
-            var list = invertedQualtrics.ToList();
-            list.Sort((x,y) => x.Email.CompareTo(y.Email));
-            var aggregatedFeedbackByPerson = new Dictionary<string, List<InvertedQualtrics>>();
-            foreach (var feedback in list)
-            {
-                if (aggregatedFeedbackByPerson.TryGetValue(feedback.Email, out List<InvertedQualtrics>? value))
-                {
-                    value.Add(feedback);
-                }
-                else
-                {
-                    aggregatedFeedbackByPerson.Add(feedback.Email, [feedback]);
-                }
-            }
-            return aggregatedFeedbackByPerson;
         }
     }
 }

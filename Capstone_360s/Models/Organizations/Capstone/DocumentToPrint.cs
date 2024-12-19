@@ -1,6 +1,6 @@
-﻿using Capstone_360s.Models.Survey;
+﻿using Capstone_360s.Models.Generics;
 
-namespace Capstone_360s.Models.CapstoneRoster
+namespace Capstone_360s.Models.Organizations.Capstone
 {
     public class DocumentToPrint : GenericDocumentContent
     {
@@ -25,11 +25,11 @@ namespace Capstone_360s.Models.CapstoneRoster
         public string[] Comments { get; set; }
         public string? ParentGDFolderId { get; set; }
 
-        public DocumentToPrint() 
-        { 
-            this.FullName = this.FirstName + " " + this.LastName;
-            this.RoundName = "Round " + this.RoundNumber;
+        public DocumentToPrint()
+        {
+            FullName = FirstName + " " + LastName;
+            RoundName = "Round " + RoundNumber;
         }
-        
+
     }
 }

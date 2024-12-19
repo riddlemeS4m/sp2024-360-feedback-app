@@ -13,19 +13,22 @@ namespace Capstone_360s.Models.FeedbackDb
         [StringLength(100)]
         public string Name { get; set; }
 
+        [Required]
+        public string Type { get; set;}
+        
+        public string? GDFolderId { get; set; }
+
         [NotMapped]
         public List<Timeframe> Timeframes { get; set; }
-
-        [NotMapped]
-        public List<User> Users { get; set; }
-
-        public string? GDFolderId { get; set; }
 
         [NotMapped]
         public List<Metric> Metrics { get; set; }
 
         [NotMapped]
         public List<Question> Questions { get; set; }
+
+        [NotMapped]
+        public List<UserOrganization> Users { get; set; }
 
         public override string ToString()
         {

@@ -13,48 +13,53 @@
     <a class="btn btn-primary" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New</a>
 </p>
 
+<div class="col-md-8">
 <table class="table">
     <thead>
         <tr>
-            <th>
+@*             <th>
                 @nameof(ProjectRound.ProjectId)
             </th>
             <th>
                 @nameof(ProjectRound.RoundId)
             </th>
-            <th>
+ *@            <th>
                 @nameof(ProjectRound.Round.Name)
             </th>
-            <th>
+@*             <th>
                 @nameof(ProjectRound.GDFolderId)
             </th>
-            <th></th>
+ *@                     
+             <th></th>
         </tr>
     </thead>
     <tbody>
         @foreach (var item in Model.ProjectRounds)
         {
-@*             <tr onclick="navigateToSelect('@Url.Action("FeedbackIndex", new { projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
- *@         <tr>   
-                <td>
+            <tr onclick="navigateToSelect('@Url.Action("FeedbackPdfsIndex", new { organizationId = Model.OrganizationId, projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
+@*          <tr>   
+ *@@*                 <td>
                     @Html.DisplayFor(modelItem => item.ProjectId)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.RoundId)
                 </td>
-                <td>
+ *@                <td>
                     @Html.DisplayFor(modelItem => item.Round.Name)
                 </td>
-                <td>
+                @* <td>
                     <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                </td>
+                </td> *@
                 <td>
 @*                     <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-timeframeId="@Model.TimeframeId" asp-route-roundId="@item.RoundId">Select</a>
- *@                </td>
+ *@                
+                    <a asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
+                </td>
             </tr>
         }
     </tbody>
 </table>
+</div>
 <p>
     <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
 </p>

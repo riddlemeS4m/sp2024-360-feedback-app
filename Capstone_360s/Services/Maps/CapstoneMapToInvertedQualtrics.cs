@@ -1,34 +1,21 @@
 ﻿using Capstone_360s.Data.Constants;
 using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Models.CapstoneRoster;
 using Capstone_360s.Services.FeedbackDb;
+using Capstone_360s.Models.Organizations.Capstone;
+using Capstone_360s.Utilities;
 
 namespace Capstone_360s.Services.Maps
 {
+    [Organization("Capstone")]
     public class CapstoneMapToInvertedQualtrics : IMapFeedback<InvertedQualtrics>
     {
-        private readonly OrganizationService _organizationService;
-        private readonly TimeframeService _timeframeService;
-        private readonly ProjectService _projectService;
-        private readonly UserService _userService;
-        private readonly MetricResponseService _metricResponseService;
-        private readonly QuestionResponseService _questionResponseService;
+        private readonly FeedbackDbServiceFactory _serviceFactory;
         private readonly ILogger<CapstoneMapToInvertedQualtrics> _logger;
-        public CapstoneMapToInvertedQualtrics(OrganizationService organizationService, 
-            TimeframeService timeframeService,
-            ProjectService projectService, 
-            UserService userService, 
-            MetricResponseService metricResponseService, 
-            QuestionResponseService questionResponseService,
+        public CapstoneMapToInvertedQualtrics(FeedbackDbServiceFactory serviceFactory,
             ILogger<CapstoneMapToInvertedQualtrics> logger)
         {
-            _organizationService = organizationService;
-            _timeframeService = timeframeService;
-            _projectService = projectService;
-            _userService = userService;
-            _metricResponseService = metricResponseService;
-            _questionResponseService = questionResponseService;
+            _serviceFactory = serviceFactory;
             _logger = logger;
         }
 
@@ -59,16 +46,17 @@ namespace Capstone_360s.Services.Maps
             var users = feedback.Select(x => x.RevieweeId).Distinct().ToList();
             var feedbackIds = feedback.Select(x => x.Id).ToList();
 
-            var project = await _projectService.GetByIdAsync(feedback.ElementAt(0).ProjectId);
+            var project = await _serviceFactory.ProjectService.GetByIdAsync(feedback.ElementAt(0).ProjectId);
             var projectsDict = feedback.Select(x => ( x.Id, x.Project )).Distinct().ToDictionary();
 
-            var organization = await _organizationService.GetByIdAsync(project.OrganizationId);
-            var timeframe = await _timeframeService.GetByIdAsync(project.TimeframeId);
+            var organization = await _serviceFactory.OrganizationService.GetByIdAsync(project.OrganizationId);
+            var timeframe = await _serviceFactory.TimeframeService.GetByIdAsync(project.TimeframeId);
 
-            var usersInfo = await _userService.GetUsersByOrganizationId(organization.Id);
+            var usersInfoUO = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organization.Id);
+            var usersInfo = usersInfoUO.Select(x => x.User).ToList();
 
-            var feedbackMetricsDict = await _metricResponseService.GetMetricResponsesDictByFeedbackIds(feedbackIds);
-            var feedbackQuestionsDict = await _questionResponseService.GetQuestionResponsesDictByFeedbackIds(feedbackIds);
+            var feedbackMetricsDict = await _serviceFactory.MetricResponseService.GetMetricResponsesDictByFeedbackIds(feedbackIds);
+            var feedbackQuestionsDict = await _serviceFactory.QuestionResponseService.GetQuestionResponsesDictByFeedbackIds(feedbackIds);
 
             var list = new List<InvertedQualtrics>();
 

@@ -36,12 +36,12 @@ namespace Capstone_360s.Services.Identity
                 while (attempt < MaxRetries)
                 {
                     attempt++;
-                    using var connection = new MySqlConnection(_connectionString);
+                    await using var connection = new MySqlConnection(_connectionString);
                     try
                     {
                         await connection.OpenAsync();
 
-                        using var command = new MySqlCommand
+                        await using var command = new MySqlCommand
                         {
                             Connection = connection,
                             CommandText = @"
@@ -63,6 +63,9 @@ namespace Capstone_360s.Services.Identity
                         {
                             roles.Add(reader.GetString(0));
                         }
+
+                        await connection.CloseAsync();
+                        _semaphore.Release();
 
                         return roles;
                     }

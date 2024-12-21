@@ -37,9 +37,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid?>("FeedbackPdfId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("GDFileId")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("OriginalResponseId")
                         .HasColumnType("longtext");
 
@@ -193,6 +190,10 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -417,9 +418,6 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<bool>("IsPOC")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -428,16 +426,32 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid?>("MicrosoftId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
 
+                    b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.UserOrganization", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("AddedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("RemovedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId", "OrganizationId");
+
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("users");
+                    b.ToTable("userorganizations");
                 });
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.Feedback", b =>
@@ -656,7 +670,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.User", b =>
+            modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.UserOrganization", b =>
                 {
                     b.HasOne("Capstone_360s.Models.FeedbackDb.Organization", "Organization")
                         .WithMany()
@@ -664,7 +678,15 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Organization");
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

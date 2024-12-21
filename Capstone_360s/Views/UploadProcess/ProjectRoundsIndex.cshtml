@@ -1,63 +1,82 @@
-﻿@using Capstone_360s.Models.FeedbackDb
+﻿@using Capstone_360s.Interfaces
+@using Capstone_360s.Models.FeedbackDb
 
 @model Capstone_360s.Models.VMs.ProjectRoundsIndexVM
+@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Project Rounds";
 
     var projectId = Context.Request.Query["projectId"].ToString();
+    var project = await feedbackDbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
 }
 
-<h1>Project Rounds</h1>
+<h1>@project.Name Rounds</h1>
 <p>
+    <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
     <a class="btn btn-primary" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New</a>
 </p>
 
+<div class="col-md-8">
 <table class="table">
     <thead>
         <tr>
-            <th>
+@*             <th>
                 @nameof(ProjectRound.ProjectId)
             </th>
             <th>
                 @nameof(ProjectRound.RoundId)
             </th>
-            <th>
+    using Capstone_360s.Services.FeedbackDb;
+ *@            <th>
                 @nameof(ProjectRound.Round.Name)
             </th>
             <th>
+                @nameof(ProjectRound.ReleaseDate)
+            </th>
+            <th>
+                @nameof(ProjectRound.DueDate)
+            </th>
+@*             <th>
                 @nameof(ProjectRound.GDFolderId)
             </th>
-            <th></th>
+ *@                     
+             <th></th>
         </tr>
     </thead>
     <tbody>
         @foreach (var item in Model.ProjectRounds)
         {
-@*             <tr onclick="navigateToSelect('@Url.Action("FeedbackIndex", new { projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
- *@         <tr>   
-                <td>
+            <tr onclick="navigateToSelect('@Url.Action("FeedbackPdfsIndex", new { organizationId = Model.OrganizationId, projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
+@*          <tr>   
+ *@@*                 <td>
                     @Html.DisplayFor(modelItem => item.ProjectId)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.RoundId)
                 </td>
-                <td>
+ *@                <td>
                     @Html.DisplayFor(modelItem => item.Round.Name)
                 </td>
                 <td>
-                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                    @Html.DisplayFor(modelItem => item.ReleaseDate)
                 </td>
                 <td>
+                    @Html.DisplayFor(modelItem => item.DueDate)
+                </td>
+                @* <td>
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                </td> *@
+                <td>
 @*                     <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-timeframeId="@Model.TimeframeId" asp-route-roundId="@item.RoundId">Select</a>
- *@                </td>
+ *@                
+                    <a asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
+                </td>
             </tr>
         }
     </tbody>
 </table>
-<p>
-    <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
-</p>
+</div>
 
 
 @section Scripts {

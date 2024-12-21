@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Create Rounds";
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
 }
 
 <h4>Create Rounds</h4>
@@ -26,13 +28,10 @@
             <br />
             <div class="form-group">
                 <input type="submit" value="Create" class="btn btn-primary" />
+                <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Back</a>
             </div>
         </form>
     </div>
-</div>
-
-<div>
-    <a asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId">Back</a>
 </div>
 
 @section Scripts {

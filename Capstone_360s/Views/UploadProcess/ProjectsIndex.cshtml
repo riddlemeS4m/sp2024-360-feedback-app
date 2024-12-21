@@ -1,58 +1,56 @@
-﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
+﻿@using Capstone_360s.Interfaces
+
+@model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
+@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Projects";
 
-    var organizationId = Context.Request.Query["organizationId"].ToString();
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
+    var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
 }
 
-<h1>Projects</h1>
+<h1>@timeframe.Name Projects</h1>
+<h4>Select a project below</h4>
 
 <p>
-    <a class="btn btn-primary" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
-    <a class="btn btn-secondary" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
-    <a class="btn btn-warning" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Capstone Roster</a>
+    <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+    <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
+    <a class="btn btn-secondary" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
+    <a class="btn btn-success" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a>
 </p>
-
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Id)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
+<div class="col-md-6">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.Name)
+                </th>
+                @* <th>
                 @Html.DisplayNameFor(model => model.GDFolderId)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
-                <td>
-                    @Html.DisplayFor(modelItem => item.Id)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Name)
-                </td>
-                <td>
-                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                </td>
-                <td>
-                    <a asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
-                </td>
+            </th> *@
+                <th></th>
             </tr>
-        }
-    </tbody>
-</table>
-<p>
-    <a class="btn btn-primary" asp-action="TimeframesIndex" asp-route-id="@organizationId">Back</a>
-</p>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Name)
+                    </td>
+                    @* <td>
+                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                </td> *@
+                    <td>
+                        <a asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 
 @section Scripts {

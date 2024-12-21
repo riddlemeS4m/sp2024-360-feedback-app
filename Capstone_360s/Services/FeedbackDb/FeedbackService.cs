@@ -24,6 +24,12 @@ namespace Capstone_360s.Services.FeedbackDb
                 .ToListAsync();
         }
 
+        /// <summary>
+        ///     
+        /// </summary>
+        /// <param name="timeframeId"></param>
+        /// <param name="roundId"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<Feedback>> GetMultipleRoundsOfFeedbackByTimeframeIdAndRoundId(int timeframeId, int roundId)
         {
             _logger.LogInformation("Getting feedback by project id, time frame id, and round id...");
@@ -32,6 +38,8 @@ namespace Capstone_360s.Services.FeedbackDb
                 .Include(x => x.Project)
                 .Include(x => x.Reviewer)
                 .Where(f => f.TimeframeId == timeframeId && f.RoundId <= roundId)
+                .GroupBy(f => new { f.RevieweeId, f.ReviewerId, f.ProjectId, f.TimeframeId, f.RoundId, f.OriginalResponseId })
+                .Select(g => g.First())
                 .ToListAsync();
         }
     }

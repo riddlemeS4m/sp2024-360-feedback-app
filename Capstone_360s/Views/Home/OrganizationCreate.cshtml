@@ -1,0 +1,179 @@
+﻿@model Capstone_360s.Models.FeedbackDb.Organization
+
+@{
+    ViewData["Title"] = "Create Organization";
+}
+
+<h4>Create Organization</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="OrganizationCreate">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Type" class="control-label"></label>
+                <input asp-for="Type" class="form-control" />
+                <span asp-validation-for="Type" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <!--add question button-->
+                <button type="button" class="btn btn-primary" id="add-metric">Add Metric</button>
+            </div>
+
+
+            <!-- Specify organization survey metrics -->
+            <div id="survey-metrics-container">
+
+            </div>
+            <br />
+
+            <div class="form-group">
+                <!--add question button-->
+                <button type="button" class="btn btn-primary" id="add-question">Add Question</button>
+
+            </div>
+
+            <!-- Specify organization survey questions-->
+            <div id="survey-questions-container">
+
+            </div>
+            <br />
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back</a>
+</div>
+
+@section Scripts {
+
+    <script>
+        document.getElementById('add-metric').addEventListener('click', function () {
+            const container = document.getElementById('survey-metrics-container');
+            const i = container.querySelectorAll('.form-group').length;
+
+            const br = document.createElement('br');
+            container.appendChild(br);
+
+            // const heading = document.createElement('p')
+            // heading.textContent = 'Metric';
+
+            //create inputs for metric name, description, min, and max
+            const divMetricName = document.createElement('div');
+            divMetricName.classList.add('form-group');
+
+            const labelName = document.createElement('label');
+            labelName.textContent = `Name`;
+            labelName.setAttribute('for', `Names_${i}`);
+            divMetricName.appendChild(labelName);
+
+            const inputName = document.createElement('input');
+            inputName.type = 'text';
+            inputName.maxLength = 100;
+            inputName.name = `Names[${i}]`;
+            inputName.id = `Names_${i}`;
+            inputName.classList.add('form-control');
+            divMetricName.appendChild(inputName);
+
+            const labelDescription = document.createElement('label');
+            labelDescription.textContent = `Description`;
+            labelDescription.setAttribute('for', `Descriptions_${i}`);
+            divMetricName.appendChild(labelDescription);
+
+            const inputDescription = document.createElement('input');
+            inputDescription.type = 'text';
+            inputDescription.maxLength = 255;
+            inputDescription.name = `Descriptions[${i}]`;
+            inputDescription.id = `Descriptions_${i}`;
+            inputDescription.classList.add('form-control');
+            divMetricName.appendChild(inputDescription);
+
+            const labelMin = document.createElement('label');
+            labelMin.textContent = `Minimum`;
+            labelMin.setAttribute('for', `Mins_${i}`);
+            divMetricName.appendChild(labelMin);
+
+            const inputMin = document.createElement('input');
+            inputMin.type = 'number';
+            inputMin.min = 0;
+            inputMin.name = `Mins[${i}]`;
+            inputMin.id = `Mins_${i}`;
+            inputMin.classList.add('form-control');
+            divMetricName.appendChild(inputMin);
+
+            const labelMax = document.createElement('label');
+            labelMax.textContent = `Maximum`;
+            labelMax.setAttribute('for', `Maxs_${i}`);
+            divMetricName.appendChild(labelMax);
+
+            const inputMax = document.createElement('input');
+            inputMax.type = 'number';
+            inputMax.min = 0;
+            inputMax.name = `Maxs[${i}]`;
+            inputMax.id = `Maxs_${i}`;
+            inputMax.classList.add('form-control');
+            divMetricName.appendChild(inputMax);
+
+            container.appendChild(divMetricName);
+        });
+    </script>
+
+    <script>
+        document.getElementById('add-question').addEventListener('click', function () {
+            const container = document.getElementById('survey-questions-container');
+            const i = container.querySelectorAll('.form-group').length;
+
+            const br = document.createElement('br');
+            container.appendChild(br);
+
+            // const heading = document.createElement('p')
+            // heading.textContent = 'Question';
+
+            //create inputs for question name, description, and type
+            const divQuestionName = document.createElement('div');
+            divQuestionName.classList.add('form-group');
+
+            const labelName = document.createElement('label');
+            labelName.textContent = `Question`;
+            labelName.setAttribute('for', `Qs_${i}`);
+            divQuestionName.appendChild(labelName);
+
+            const inputName = document.createElement('input');
+            inputName.type = 'text';
+            inputName.maxLength = 255;
+            inputName.name = `Qs[${i}]`;
+            inputName.id = `Qs_${i}`;
+            inputName.classList.add('form-control');
+            divQuestionName.appendChild(inputName);
+
+            const labelDescription = document.createElement('label');
+            labelDescription.textContent = `Example`;
+            labelDescription.setAttribute('for', `Examples_${i}`);
+            divQuestionName.appendChild(labelDescription);
+
+            const inputDescription = document.createElement('input');
+            inputDescription.type = 'text';
+            inputDescription.maxLength = 255;
+            inputDescription.name = `Examples[${i}]`;
+            inputDescription.id = `Examples_${i}`;
+            inputDescription.classList.add('form-control');
+            divQuestionName.appendChild(inputDescription);
+
+            container.appendChild(divQuestionName);
+        });
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -2,11 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using Capstone_360s.Interfaces.IDbContext;
 using Capstone_360s.Models.FeedbackDb;
-using System.Reflection.Emit;
 
 namespace Capstone_360s.Data.Contexts
 {
-    public class FeedbackMySqlDbContext: DbContext, IFeedbackDbContext
+    public class FeedbackMySqlDbContext : DbContext, IFeedbackDbContext
     {
         public DbSet<Feedback> Feedback { get; set; }
         public DbSet<Metric> Metrics { get; set; }
@@ -20,6 +19,7 @@ namespace Capstone_360s.Data.Contexts
         public DbSet<TeamMember> Teams { get; set; }
         public DbSet<Timeframe> Timeframes { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserOrganization> UserOrganizations { get; set; }
 
         public FeedbackMySqlDbContext(DbContextOptions<FeedbackMySqlDbContext> options) : base(options)
         {

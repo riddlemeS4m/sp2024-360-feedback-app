@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -25,18 +24,15 @@ namespace Capstone_360s.Models.FeedbackDb
 
         public Guid? MicrosoftId { get; set;  }
 
-        [Required]
-        public Guid OrganizationId { get; set; }
+        // public Guid? OrganizationId { get; set; }
+        // public Organization Organization { get; set; }
 
-        [ForeignKey(nameof(OrganizationId))]
-        public Organization Organization { get; set; }
-
-        [DefaultValue(false)]
-        public bool IsPOC { get; set;  }
+        [NotMapped]
+        public List<UserOrganization> Organizations { get; set; }
 
         public override string ToString()
         {
-            return $"{nameof(User)}: Id = {Id}, FirstName = {FirstName}, LastName = {LastName}, Email = {Email}, MicrosoftId = {MicrosoftId}, IsPOC = {IsPOC}";
+            return $"{nameof(User)}: Id = {Id}, FirstName = {FirstName}, LastName = {LastName}, Email = {Email}, MicrosoftId = {MicrosoftId}";
         }
 
     }

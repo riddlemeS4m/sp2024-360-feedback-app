@@ -11,11 +11,7 @@ namespace Capstone_360s
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((context, config) =>
                 {
-                    // Load additional configuration for development
-                    if (context.HostingEnvironment.IsDevelopment())
-                    {
-                        config.AddUserSecrets<Program>(); // Load user secrets only in development
-                    }
+                    config.AddUserSecrets<Program>();
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

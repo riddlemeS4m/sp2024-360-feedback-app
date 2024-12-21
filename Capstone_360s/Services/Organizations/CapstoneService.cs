@@ -309,7 +309,7 @@ namespace Capstone_360s.Services.Organizations
             _logger.LogInformation($"{data.Count} rows were read and mapped.");
         }
 
-        private List<QuestionResponse> GenerateAllQuestionResponses(Feedback feedback, List<Question> questions, List<string> responses)
+        private static List<QuestionResponse> GenerateAllQuestionResponses(Feedback feedback, List<Question> questions, List<string> responses)
         {
             var list = new List<QuestionResponse>();
             for(int i = 0; i < questions.Count; i++)
@@ -319,7 +319,7 @@ namespace Capstone_360s.Services.Organizations
             return list;
         }
 
-        private QuestionResponse GenerateQuestionResponse(Feedback feedback, int questionId, string response)
+        private static QuestionResponse GenerateQuestionResponse(Feedback feedback, int questionId, string response)
         {
             return new QuestionResponse()
             {
@@ -329,7 +329,7 @@ namespace Capstone_360s.Services.Organizations
             };
         }
 
-        private List<MetricResponse> GenerateAllMetricResponses(Feedback feedback, List<Metric> metrics, List<string> responses)
+        private static List<MetricResponse> GenerateAllMetricResponses(Feedback feedback, List<Metric> metrics, List<string> responses)
         {
             var list = new List<MetricResponse>();
             for(int i = 0; i < metrics.Count; i++)
@@ -339,7 +339,7 @@ namespace Capstone_360s.Services.Organizations
             return list;
         }
 
-        private MetricResponse GenerateMetricResponse(Feedback feedback, int metricId, string response)
+        private static MetricResponse GenerateMetricResponse(Feedback feedback, int metricId, string response)
         {
             return new MetricResponse()
             {
@@ -349,7 +349,7 @@ namespace Capstone_360s.Services.Organizations
             };
         }
 
-        private IEnumerable<Qualtrics> ReadSurveyResponsesWithFilterDate(IFormFile file, IEnumerable<string> expectedHeaders, string dateField, DateTime filterDate,
+        private static List<Qualtrics> ReadSurveyResponsesWithFilterDate(IFormFile file, IEnumerable<string> expectedHeaders, string dateField, DateTime filterDate,
             FilterDateFunc filterDateFunc)
         {
             // Check if the file is null or empty
@@ -893,7 +893,7 @@ namespace Capstone_360s.Services.Organizations
             return listItems;
         }
 
-        private Dictionary<string, List<InvertedQualtrics>> AggregateFeedbackByPerson(IEnumerable<InvertedQualtrics> invertedQualtrics)
+        private static Dictionary<string, List<InvertedQualtrics>> AggregateFeedbackByPerson(IEnumerable<InvertedQualtrics> invertedQualtrics)
         {
             var list = invertedQualtrics.ToList();
             list.Sort((x,y) => x.Email.CompareTo(y.Email));

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using System.Security.Claims;
 using Capstone_360s.Models;
 using Capstone_360s.Services.Configuration;
 using Capstone_360s.Utilities;
@@ -65,7 +64,7 @@ namespace Capstone_360s
                 app.UseMigrationsEndPoint();
             }
 
-            app.UseHttpsRedirection();
+            // app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -86,24 +85,29 @@ namespace Capstone_360s
                 endpoints.MapRazorPages();      
             });
 
+            // health check
+            // app.Map("/health", builder => builder.Run(async context => {
+            //     await context.Response.WriteAsync("Healthy");
+            // }));
+
             // logging hook for roles
-            app.Use(async (context, next) =>
-            {
-                var user = context.User;
-                if (user.Identity.IsAuthenticated && user.HasClaim(c => c.Type == "Role"))
-                {
-                    var claimsIdentity = user.Identity as ClaimsIdentity;
-                    var roleClaim = claimsIdentity?.FindFirst("Role");
+            // app.Use(async (context, next) =>
+            // {
+            //     var user = context.User;
+            //     if (user.Identity.IsAuthenticated && user.HasClaim(c => c.Type == "Role"))
+            //     {
+            //         var claimsIdentity = user.Identity as ClaimsIdentity;
+            //         var roleClaim = claimsIdentity?.FindFirst("Role");
 
-                    if (roleClaim != null)
-                    {
-                        claimsIdentity.RemoveClaim(roleClaim);
-                        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
-                    }
-                }
+            //         if (roleClaim != null)
+            //         {
+            //             claimsIdentity.RemoveClaim(roleClaim);
+            //             claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+            //         }
+            //     }
 
-                await next();
-            });
+            //     await next();
+            // });
         }
     }
 }

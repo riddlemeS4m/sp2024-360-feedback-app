@@ -1,9 +1,9 @@
-﻿using Dapper;
+﻿using Capstone_360s.Interfaces.IService;
 using MySql.Data.MySqlClient;
 
 namespace Capstone_360s.Services.Identity
 {
-    public class RoleManagerService
+    public class RoleManagerService : IRoleManager
     {
         public const string AdminOnlyPolicy = "AdministratorOnly";
         public const string SponsorOnlyPolicy = "SponsorOnly";
@@ -88,7 +88,5 @@ namespace Capstone_360s.Services.Identity
                 _semaphore.Release();  // Ensure semaphore is released even if the method throws
             }
         }
-
-
     }
 }

@@ -12,11 +12,11 @@ namespace Capstone_360s.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly RoleManagerService _roleManager;
+        private readonly IRoleManager _roleManager;
         private readonly IMicrosoftGraph _microsoftGraphService;
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
         private readonly ILogger<AccountController> _logger;
-        public AccountController(RoleManagerService roleManager,
+        public AccountController(IRoleManager roleManager,
             IMicrosoftGraph microsoftGraphService,
             IFeedbackDbServiceFactory dbServiceFactory,
             ILogger<AccountController> logger)

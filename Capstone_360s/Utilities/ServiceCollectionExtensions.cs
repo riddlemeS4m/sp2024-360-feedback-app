@@ -22,6 +22,7 @@ using SendGrid;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using System.Net;
 
 namespace Capstone_360s.Utilities
 {
@@ -58,6 +59,8 @@ namespace Capstone_360s.Utilities
 
         public static IServiceCollection AddMicrosoftAuth(this IServiceCollection services, CustomConfigurationService config)
         {
+            services.AddDistributedMemoryCache();
+
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -91,6 +94,9 @@ namespace Capstone_360s.Utilities
                     SaveSigninToken = true
                 };
 
+                // options.NonceCookie.SameSite = SameSiteMode.None;
+                // options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
+
                 // Event handlers to ensure persistent OIDC session
                 options.Events = new OpenIdConnectEvents
                 {
@@ -108,10 +114,25 @@ namespace Capstone_360s.Utilities
                             new ClaimsPrincipal(claimsIdentity),
                             context.Properties);
                     },
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        context.HttpContext.RequestServices
+                            .GetService<ILogger<Program>>()
+                            .LogInformation("Redirecting to Microsoft OIDC...");
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        context.HttpContext.RequestServices
+                            .GetService<ILogger<Program>>()
+                            .LogInformation("OIDC Token validated.");
+                        return Task.CompletedTask;
+                    },
                     OnAuthenticationFailed = context =>
                     {
-                        context.HandleResponse();
-                        context.Response.Redirect("/Account/Error?message=" + context.Response.ToString());
+                        context.HttpContext.RequestServices
+                            .GetService<ILogger<Program>>()
+                            .LogError("Authentication failed: {0}", context.Exception.Message);
                         return Task.CompletedTask;
                     }
                 };
@@ -122,7 +143,7 @@ namespace Capstone_360s.Utilities
                 options.BaseUrl = config.MicrosoftGraphBaseUrl;
                 options.Scopes = config.MicrosoftGraphScopes;
             })
-            .AddInMemoryTokenCaches(); // Use Redis/DistributedCache in production
+            .AddDistributedTokenCaches(); // Use Redis/DistributedCache in production
 
             // Register Microsoft Graph service
             services.AddScoped<IMicrosoftGraph, MicrosoftGraphService>(serviceProvider =>
@@ -155,7 +176,7 @@ namespace Capstone_360s.Utilities
                     .Build();
             });
 
-            services.AddTransient(provider =>
+            services.AddSingleton<IRoleManager, RoleManagerService>(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<RoleManagerService>>();
                 return new RoleManagerService(config.RolesDbConnection, logger);
@@ -163,7 +184,7 @@ namespace Capstone_360s.Utilities
 
             services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>(sp => {
                 var logger = sp.GetRequiredService<ILogger<RoleClaimsTransformation>>();
-                var manager = sp.GetRequiredService<RoleManagerService>();
+                var manager = sp.GetRequiredService<IRoleManager>();
 
                 return new RoleClaimsTransformation(manager, logger);
             });

@@ -1,14 +1,15 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using Capstone_360s.Interfaces.IService;
+using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 
 namespace Capstone_360s.Services.Identity
 {
     public class RoleClaimsTransformation : IClaimsTransformation
     {
-        private readonly RoleManagerService _roleService;
+        private readonly IRoleManager _roleService;
         private readonly ILogger<RoleClaimsTransformation> _logger;
 
-        public RoleClaimsTransformation(RoleManagerService roleService,
+        public RoleClaimsTransformation(IRoleManager roleService,
             ILogger<RoleClaimsTransformation> logger)
         {
             _roleService = roleService;

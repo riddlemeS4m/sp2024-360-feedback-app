@@ -1,10 +1,8 @@
 ﻿using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Models.Generics;
-using static iText.StyledXmlParser.Jsoup.Select.Evaluator;
 
 namespace Capstone_360s.Models.Organizations.Capstone
 {
-    public class InvertedQualtrics : GenericInversion
+    public class InvertedQualtrics
     {
         // Metadata about the response
         public Organization Organization { get; set; }

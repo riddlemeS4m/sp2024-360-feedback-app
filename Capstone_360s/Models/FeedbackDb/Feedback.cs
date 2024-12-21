@@ -57,7 +57,7 @@ namespace Capstone_360s.Models.FeedbackDb
         public DateTime? EndTime { get; set;}
         public int? DurationSeconds { get; set;}
 
-        public string? GDFileId { get; set; }
+        // public string? GDFileId { get; set; }
         public string? OriginalResponseId { get; set; }
 
         [NotMapped]
@@ -74,7 +74,7 @@ namespace Capstone_360s.Models.FeedbackDb
 
         public override string ToString()
         {
-            return $"{nameof(Feedback)}: Id = {Id}, ReviewerId = {ReviewerId}, RevieweeId = {RevieweeId}, ProjectId = {ProjectId}, RoundId = {RoundId}, TimeframeId = {TimeframeId}, StartTime = {StartTime}, EndTime = {EndTime}, DurationSeconds = {DurationSeconds}, GDFileId = {GDFileId}";
+            return $"{nameof(Feedback)}: Id = {Id}, ReviewerId = {ReviewerId}, RevieweeId = {RevieweeId}, ProjectId = {ProjectId}, RoundId = {RoundId}, TimeframeId = {TimeframeId}, StartTime = {StartTime}, EndTime = {EndTime}, DurationSeconds = {DurationSeconds}";
         }
     }
 }

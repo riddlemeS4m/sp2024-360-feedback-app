@@ -6,8 +6,6 @@ using System.Security.Claims;
 using Capstone_360s.Models;
 using Capstone_360s.Services.Configuration;
 using Capstone_360s.Utilities;
-using Capstone_360s.Services.Configuration.Organizations;
-using Capstone_360s.Interfaces.IOrganization;
 
 namespace Capstone_360s
 {
@@ -37,11 +35,6 @@ namespace Capstone_360s
                 options.KnownNetworks.Clear();
                 options.KnownProxies.Clear();
             });
-
-            // Configure Organizations
-            services.RegisterCapstoneServices(customConfiguration.CapstoneOrg);
-
-            services.AddScoped<IOrganizationServiceFactory, OrganizationServiceFactory>();
 
             // organizationConfigurationService.PerformContextChecks(serviceProvider);
 
@@ -83,12 +76,12 @@ namespace Capstone_360s
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-                endpoints.MapControllerRoute(
                     name: "areas",
                     pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
 
                 endpoints.MapRazorPages();      
             });

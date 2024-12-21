@@ -1,8 +1,8 @@
-﻿@using Capstone_360s.Models.FeedbackDb
-@using Capstone_360s.Services.FeedbackDb
+﻿@using Capstone_360s.Interfaces
+@using Capstone_360s.Models.FeedbackDb
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
-@inject FeedbackDbServiceFactory feedbackDbServiceFactory
+@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Round Feedback";

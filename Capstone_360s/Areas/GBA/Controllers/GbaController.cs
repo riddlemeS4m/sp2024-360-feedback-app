@@ -1,5 +1,5 @@
 ﻿using Capstone_360s.Controllers;
-using Capstone_360s.Services.Configuration.Organizations;
+using Capstone_360s.Services.Organizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,17 +9,17 @@ namespace Capstone_360s.Areas.GBA.Controllers
     [Authorize]
     public class GbaController : BaseController
     {
-        public const string Name = "Capstone";
-        private readonly GbaOrganizationServices _gbaServices;
+        public const string Name = "GBA";
+        private readonly GbaService _gbaService;
         private readonly ILogger<GbaController> _logger;
 
         public GbaController(
-            GbaOrganizationServices gbaServices,
+            GbaService gbaService,
             ILogger<GbaController> logger
         )
 
         {
-            _gbaServices = gbaServices;
+            _gbaService = gbaService;
             _logger = logger;
         }
 
@@ -28,22 +28,14 @@ namespace Capstone_360s.Areas.GBA.Controllers
             return View();
         }
 
-        public override IActionResult UploadRoster(int timeframeId)
+        [HttpPost]
+        public async Task<IActionResult> UploadRoster(IFormFile roster)
         {
             throw new NotImplementedException();
         }
 
-        public override Task<IActionResult> UploadRoster(IFormFile roster, DateTime filterDate, int roundId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override IActionResult GeneratePdfs(int timeframeId, int roundId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Task<IActionResult> GeneratePdfs()
+        [HttpPost]
+        public async Task<IActionResult> GeneratePdfs()
         {
             throw new NotImplementedException();
         }

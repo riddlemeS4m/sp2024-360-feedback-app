@@ -1,7 +1,7 @@
+using Capstone_360s.Interfaces;
 using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models;
 using Capstone_360s.Models.FeedbackDb;
-using Capstone_360s.Services.FeedbackDb;
 using Capstone_360s.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,13 +12,13 @@ namespace Capstone_360s.Controllers
     public class HomeController : Controller
     {
         public const string Name = "Home";
-        private readonly FeedbackDbServiceFactory _dbServiceFactory;
+        private readonly IFeedbackDbServiceFactory _dbServiceFactory;
         private readonly IGoogleDrive _googleDriveService;
         private readonly IAuthorizationService _authorizationService;
         private readonly ILogger<HomeController> _logger;
 
         public HomeController(
-            FeedbackDbServiceFactory serviceFactory,
+            IFeedbackDbServiceFactory serviceFactory,
             IGoogleDrive googleDriveService,
             IAuthorizationService authorizationService,
             ILogger<HomeController> logger)

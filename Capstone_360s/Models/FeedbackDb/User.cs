@@ -24,8 +24,8 @@ namespace Capstone_360s.Models.FeedbackDb
 
         public Guid? MicrosoftId { get; set;  }
 
-        public Guid? OrganizationId { get; set; }
-        public Organization Organization { get; set; }
+        // public Guid? OrganizationId { get; set; }
+        // public Organization Organization { get; set; }
 
         [NotMapped]
         public List<UserOrganization> Organizations { get; set; }

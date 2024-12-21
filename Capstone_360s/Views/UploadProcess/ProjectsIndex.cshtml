@@ -1,6 +1,7 @@
-﻿@using Capstone_360s.Services.FeedbackDb
+﻿@using Capstone_360s.Interfaces
+
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
-@inject FeedbackDbServiceFactory feedbackDbServiceFactory
+@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Projects";
@@ -17,8 +18,7 @@
     <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
     <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
     <a class="btn btn-secondary" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
-    <a class="btn btn-success disabled" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Process Surveys</a>
-    <a class="btn btn-warning" asp-controller="Users" asp-action="UploadCapstoneRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a>
+    <a class="btn btn-success" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a>
 </p>
 <div class="col-md-6">
     <table class="table">

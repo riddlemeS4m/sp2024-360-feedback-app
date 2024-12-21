@@ -1,8 +1,6 @@
-﻿using Capstone_360s.Models.Generics;
-
-namespace Capstone_360s.Models.Organizations.Capstone
+﻿namespace Capstone_360s.Models.Organizations.Capstone
 {
-    public class DocumentToPrint : GenericDocumentContent
+    public class DocumentToPrint
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }

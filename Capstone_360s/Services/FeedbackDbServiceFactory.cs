@@ -1,9 +1,11 @@
-﻿using Capstone_360s.Interfaces.IDbContext;
+﻿using Capstone_360s.Interfaces;
+using Capstone_360s.Interfaces.IDbContext;
+using Capstone_360s.Services.FeedbackDb;
 using System.Reflection;
 
-namespace Capstone_360s.Services.FeedbackDb
+namespace Capstone_360s.Services
 {
-    public class FeedbackDbServiceFactory
+    public class FeedbackDbServiceFactory : IFeedbackDbServiceFactory
     {
         public FeedbackService FeedbackService { get; set; }
         public FeedbackPdfService FeedbackPdfService { get; set;  }

@@ -1,16 +1,13 @@
 using Capstone_360s.Data.Contexts;
-using Capstone_360s.Interfaces.IOrganization;
 using Capstone_360s.Interfaces.IDbContext;
 using Capstone_360s.Interfaces.IService;
-using Capstone_360s.Models.Organizations.Capstone;
+using Capstone_360s.Interfaces;
+using Capstone_360s.Services;
 using Capstone_360s.Services.Configuration;
-using Capstone_360s.Services.CSV;
-using Capstone_360s.Services.FeedbackDb;
 using Capstone_360s.Services.GoogleDrive;
 using Capstone_360s.Services.Identity;
-using Capstone_360s.Services.Maps;
-using Capstone_360s.Services.PDF;
-using CsvHelper.Configuration;
+using Capstone_360s.Services.Organizations;
+using Capstone_360s.Services.Controllers;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
@@ -20,15 +17,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Identity.Web;
-using SendGrid;
-using Capstone_360s.Data.Constants;
 using Microsoft.Graph;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Capstone_360s.Utilities.Maps;
-using Capstone_360s.Services.Configuration.Organizations;
-using EllipticCurve;
-using Capstone_360s.Models.Generics;
-using System.Reflection;
+using SendGrid;
 
 namespace Capstone_360s.Utilities
 {
@@ -41,50 +31,24 @@ namespace Capstone_360s.Utilities
             services.AddFeedbackDbServices(customConfiguration);
             services.AddGoogleDrive(customConfiguration);
             services.AddSendGrid(customConfiguration);
+            services.AddControllerManagers();
+
+            services.RegisterOrganizations();
 
             return services;
         }
 
-        public static IServiceCollection RegisterCapstoneServices(this IServiceCollection services, string organizationName)
+        public static IServiceCollection RegisterOrganizations(this IServiceCollection services)
         {
-            services.AddTransient<ClassMap<Qualtrics>, CapstoneMapCsvToQualtrics>();
+            services.AddTransient<CapstoneService>(sp => {
+               var logger = sp.GetRequiredService<ILogger<CapstoneService>>();
+               var drive = sp.GetRequiredService<IGoogleDrive>();
+               var factory = sp.GetRequiredService<IFeedbackDbServiceFactory>();
 
-            services.AddTransient<IMapFeedback<InvertedQualtrics>, CapstoneMapToInvertedQualtrics>(sp =>
-            {
-                var feedbackFactory = sp.GetRequiredService<FeedbackDbServiceFactory>();
-                var logger = sp.GetRequiredService<ILogger<CapstoneMapToInvertedQualtrics>>();
-                return new CapstoneMapToInvertedQualtrics(feedbackFactory, logger);
+               return new CapstoneService(factory, drive, logger);
             });
 
-            services.AddTransient<IAccessCsvFile<Qualtrics>, CapstoneCsvService>(sp =>
-            {
-                var classMap = sp.GetRequiredService<ClassMap<Qualtrics>>();
-                var logger = sp.GetRequiredService<ILogger<CapstoneCsvService>>();
-                return new CapstoneCsvService(classMap, logger);
-            });
-
-            services.AddTransient<IWritePdf<DocumentToPrint, InvertedQualtrics>, CapstonePdfService>(sp =>
-            {
-                var invertedMap = sp.GetRequiredService<IMapFeedback<InvertedQualtrics>>();
-                var feedbackFactory = sp.GetRequiredService<FeedbackDbServiceFactory>();
-                var logger = sp.GetRequiredService<ILogger<CapstonePdfService>>();
-                return new CapstonePdfService(feedbackFactory, invertedMap, logger);
-            });
-
-            services.AddTransient<CapstoneOrganizationServices>(sp =>
-            {
-                var name = organizationName;
-                var classMap = sp.GetRequiredService<ClassMap<Qualtrics>>();
-                var invertedMap = sp.GetRequiredService<IMapFeedback<InvertedQualtrics>>();
-                var csvService = sp.GetRequiredService<IAccessCsvFile<Qualtrics>>();
-                var pdfService = sp.GetRequiredService<IWritePdf<DocumentToPrint, InvertedQualtrics>>();
-                return new CapstoneOrganizationServices(classMap, invertedMap, csvService, pdfService);
-            });
-
-            services.AddTransient<IOrganizationServices<Qualtrics, InvertedQualtrics, DocumentToPrint>, CapstoneOrganizationServices>(sp => {
-                var capstoneServices = sp.GetRequiredService<CapstoneOrganizationServices>();
-                return capstoneServices;
-            });
+            // services.RegisterGbaServices(services, customConfiguration.GbaOrg);
 
             return services;
         }
@@ -109,7 +73,7 @@ namespace Capstone_360s.Utilities
                 })
                 .AddInMemoryTokenCaches();
 
-            services.AddScoped<MicrosoftGraphService>(serviceProvider =>
+            services.AddScoped<IMicrosoftGraph, MicrosoftGraphService>(serviceProvider =>
             {
                 var graphClient = serviceProvider.GetRequiredService<GraphServiceClient>();
                 return new MicrosoftGraphService(graphClient);
@@ -151,7 +115,7 @@ namespace Capstone_360s.Utilities
                 options.UseMySql(config.FeedbackDbConnection, ServerVersion.AutoDetect(config.FeedbackDbConnection),
                     mySqlOptions => mySqlOptions.EnableRetryOnFailure()));
 
-            services.AddScoped<FeedbackDbServiceFactory>();
+            services.AddScoped<IFeedbackDbServiceFactory, FeedbackDbServiceFactory>();
 
             return services;
         }
@@ -192,6 +156,19 @@ namespace Capstone_360s.Utilities
         public static IServiceCollection AddSendGrid(this IServiceCollection services, CustomConfigurationService config)
         {
             services.AddSingleton(_ => new SendGridClient(config.SendGridKey));
+            return services;
+        }
+
+        public static IServiceCollection AddControllerManagers(this IServiceCollection services)
+        {
+            services.AddTransient<IManageFeedback, ManageFeedbackService>(sp => {
+                var factory = sp.GetRequiredService<IFeedbackDbServiceFactory>();
+                var drive = sp.GetRequiredService<IGoogleDrive>();
+                var logger = sp.GetRequiredService<ILogger<ManageFeedbackService>>();
+                
+                return new ManageFeedbackService(factory, drive, logger);
+            });
+
             return services;
         }
     }

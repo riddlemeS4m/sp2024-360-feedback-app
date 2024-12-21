@@ -1,30 +1,29 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Capstone_360s.Interfaces.IService;
+using Capstone_360s.Interfaces;
 using Capstone_360s.Services.Identity;
-using Capstone_360s.Services.FeedbackDb;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Graph;
-using NuGet.Protocol;
 
 namespace Capstone_360s.Controllers
 {
     public class AccountController : Controller
     {
         private readonly RoleManagerService _roleManager;
-        private readonly MicrosoftGraphService _microsoftGraphService;
-        private readonly FeedbackDbServiceFactory _serviceFactory;
+        private readonly IMicrosoftGraph _microsoftGraphService;
+        private readonly IFeedbackDbServiceFactory _dbServiceFactory;
         private readonly ILogger<AccountController> _logger;
         public AccountController(RoleManagerService roleManager,
-            MicrosoftGraphService microsoftGraphService,
-            FeedbackDbServiceFactory serviceFactory,
+            IMicrosoftGraph microsoftGraphService,
+            IFeedbackDbServiceFactory dbServiceFactory,
             ILogger<AccountController> logger)
         {
             _roleManager = roleManager;
             _microsoftGraphService = microsoftGraphService;
-            _serviceFactory = serviceFactory;
+            _dbServiceFactory = dbServiceFactory;
             _logger = logger;
         }
 
@@ -45,6 +44,9 @@ namespace Capstone_360s.Controllers
             var authResult = await HttpContext.AuthenticateAsync(OpenIdConnectDefaults.AuthenticationScheme);
 
             var claimsIdentity = new ClaimsIdentity(OpenIdConnectDefaults.AuthenticationScheme);
+
+            // are my cookies being signed in properly?
+            // var claimsIdentity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
 
             foreach (var claim in authResult.Principal.Claims)
             {
@@ -99,7 +101,16 @@ namespace Capstone_360s.Controllers
                 return Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, OpenIdConnectDefaults.AuthenticationScheme);
             }
 
-            //await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            // Sign in the user with cookie authentication (?)
+            // var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+            // await HttpContext.SignInAsync(
+            //     CookieAuthenticationDefaults.AuthenticationScheme,
+            //     claimsPrincipal,
+            //     new AuthenticationProperties
+            //     {
+            //         IsPersistent = true, // Persist the cookie across sessions
+            //         ExpiresUtc = DateTime.UtcNow.AddHours(1) // Set cookie expiration
+            //     });
 
             _logger.LogWarning("About to go back to the frontend...");
             return LocalRedirect(returnUrl ?? Url.Action(nameof(HomeController.Index), HomeController.Name));
@@ -119,7 +130,7 @@ namespace Capstone_360s.Controllers
             {
                 var microsoftUser = await _microsoftGraphService.GetUserIdByEmailAsync(email);
 
-                var localUser = await _serviceFactory.UserService.GetUserByEmail(email);
+                var localUser = await _dbServiceFactory.UserService.GetUserByEmail(email);
 
                 if (localUser.Id == Guid.Empty)
                 {
@@ -132,7 +143,7 @@ namespace Capstone_360s.Controllers
                         Email = email
                     };
 
-                    await _serviceFactory.UserService.AddAsync(user);
+                    await _dbServiceFactory.UserService.AddAsync(user);
 
                     return new Claim("LocalUser", user.Id.ToString());
                 }
@@ -141,7 +152,7 @@ namespace Capstone_360s.Controllers
                     if (localUser.MicrosoftId == null)
                     {
                         localUser.MicrosoftId = Guid.Parse(microsoftUser.Id);
-                        await _serviceFactory.UserService.UpdateAsync(localUser);
+                        await _dbServiceFactory.UserService.UpdateAsync(localUser);
                     }
 
                     return new Claim("LocalUser", localUser.Id.ToString());

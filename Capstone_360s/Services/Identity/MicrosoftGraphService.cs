@@ -1,9 +1,10 @@
-﻿using Microsoft.Graph;
+﻿using Capstone_360s.Interfaces.IService;
+using Microsoft.Graph;
 using Microsoft.Identity.Client;
 
 namespace Capstone_360s.Services.Identity
 {
-    public class MicrosoftGraphService
+    public class MicrosoftGraphService : IMicrosoftGraph
     {
         private readonly GraphServiceClient _graphClient;
 

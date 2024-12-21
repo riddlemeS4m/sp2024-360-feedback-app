@@ -1,14 +1,11 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
     ViewData["Title"] = "Upload Qualtrics Data";
 
-    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+    var organizationId = Context.Request.Query["organizationId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
 }
 
-<h1>Qualtrics Data Upload</h1>
+<h1>Upload Qualtrics Data</h1>
 <hr />
 <div class="row">
     <div class="col-md-3">
@@ -74,7 +71,7 @@
             const organizationId = form.querySelector('input[name="organizationId"]').value;
             const timeframeId = form.querySelector('input[name="timeframeId"]').value;
 
-            let url = `/${encodeURIComponent(organizationId)}/Users/UploadCapstoneRoster?timeframeId=${encodeURIComponent(timeframeId)}`;
+            let url = `/Capstone/Capstone/UploadRoster?organizationId=${encodeURIComponent(organizationId)}&timeframeId=${encodeURIComponent(timeframeId)}`;
 
             try {
                 let response = await fetch(url, {
@@ -85,26 +82,13 @@
                 if (!response.ok) {
                     let error = await response.text();
                     document.getElementById("upload-status").innerText = `Error: ${error}`;
+                    clearInterval(timerInterval);
+                    e.target.disabled = false;
                     return;
                 }
 
                 let result = await response.json();
                 url = result.redirectUrl;
-
-                document.getElementById("upload-status").innerHTML = `<div class="spinner-border" role="status"></div> <span>Upload successful! Generating feedback...</span>`;
-
-                response = await fetch(url, {
-                    method: "POST",
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    let error = await response.text();
-                    document.getElementById("upload-status").innerText = `Error: ${error}`;
-                    return;
-                }
-
-                result = await response.json();
 
                 setTimeout(() => {
                     window.location.href = result.redirectUrl;

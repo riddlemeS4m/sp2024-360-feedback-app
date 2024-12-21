@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 using Capstone_360s.Models.FeedbackDb;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Capstone_360s.Interfaces.IDbContext
 {

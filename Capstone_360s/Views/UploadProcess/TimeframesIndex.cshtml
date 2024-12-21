@@ -1,6 +1,7 @@
-﻿@using Capstone_360s.Services.FeedbackDb
+﻿@using Capstone_360s.Interfaces
+
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.Timeframe>
-@inject FeedbackDbServiceFactory feedbackDbServiceFactory
+@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Timeframes";

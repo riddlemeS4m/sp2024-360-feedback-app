@@ -41,18 +41,18 @@ jobs:
           dotnet restore -p:WarningLevel=0
 
           # Apply migrations conditionally
-          MIGRATIONS=$(git diff --name-only $old_commit HEAD | grep 'Data/Migrations/FeedbackDb/')
-          if [ -n "$MIGRATIONS" ]; then
-            echo "Applying migrations for FeedbackDbContext"
-            if ! dotnet ef database update --verbose --context FeedbackDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}} -p:WarningLevel=0; then
-              echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
-              git reset --hard $old_commit
-              echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
-              exit 1
-            fi
-          else
-            echo "No new migrations for FeedbackDbContext"
-          fi
+          # MIGRATIONS=$(git diff --name-only $old_commit HEAD | grep 'Data/Migrations/FeedbackDb/')
+          #if [ -n "$MIGRATIONS" ]; then
+          #  echo "Applying migrations for FeedbackDbContext"
+          #  if ! dotnet ef database update --verbose --context FeedbackMySqlDbContext --connection ${{ secrets.FEEDBACK_CONNECTION_STRING}} -p:WarningLevel=0; then
+          #    echo "##[error]Migration failed for FeedbackDbContext! You may want to manually rollback the database snapshot."
+          #    git reset --hard $old_commit
+          #    echo ${{ secrets.DROPLET_PASSWORD }} | sudo -S systemctl start ${{ secrets.KESTREL_SERVICE_NAME }}
+          #    exit 1
+          #  fi
+          #else
+          #  echo "No new migrations for FeedbackDbContext"
+          #fi
 
           # Build the project
           if ! dotnet build -p:WarningLevel=0; then

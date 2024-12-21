@@ -1,5 +1,6 @@
 ﻿using Capstone_360s.Interfaces.IService;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
+using System.Data;
 
 namespace Capstone_360s.Services.Identity
 {
@@ -33,6 +34,7 @@ namespace Capstone_360s.Services.Identity
                 await using var connection = new MySqlConnection(_connectionString);
                 try
                 {
+                    _logger.LogInformation("Opening connection...");
                     await connection.OpenAsync();
 
                     await using var command = new MySqlCommand
@@ -48,16 +50,20 @@ namespace Capstone_360s.Services.Identity
                         CommandTimeout = CommandTimeoutSeconds  // Timeout for the query
                     };
                     
+                    _logger.LogInformation("Adding parameters...");
                     command.Parameters.AddWithValue("@UserID", microsoftId);
 
-                    using var reader = await command.ExecuteReaderAsync();
+                    _logger.LogInformation("Executing reader...");
+                    await using var reader = await command.ExecuteReaderAsync();
                     var roles = new List<string>();
 
+                    _logger.LogInformation("Reading...");
                     while (await reader.ReadAsync())
                     {
                         roles.Add(reader.GetString(0));
                     }
 
+                    _logger.LogInformation("Disposing connection...");
                     await connection.DisposeAsync();
 
                     return roles;
@@ -67,8 +73,9 @@ namespace Capstone_360s.Services.Identity
                     // Retry on connection or timeout errors
                     _logger.LogWarning("Database connection failed. Attempt {0} of {1}. Error: {2}", attempt, MaxRetries, ex.Message);
 
-                    if (!connection.IsDisposed)
+                    if (connection.State == ConnectionState.Open)
                     {
+                        _logger.LogInformation("Disposing connection...");
                         await connection.DisposeAsync();
                     }
 

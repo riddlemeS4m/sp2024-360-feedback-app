@@ -19,6 +19,9 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Identity.Web;
 using Microsoft.Graph;
 using SendGrid;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace Capstone_360s.Utilities
 {
@@ -55,32 +58,86 @@ namespace Capstone_360s.Utilities
 
         public static IServiceCollection AddMicrosoftAuth(this IServiceCollection services, CustomConfigurationService config)
         {
-            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApp(options =>
-                {
-                    options.ClientId = config.MicrosoftClientId;
-                    options.ClientSecret = config.MicrosoftClientSecret;
-                    options.TenantId = config.MicrosoftTenantId;
-                    options.Instance = config.MicrosoftInstance;
-                    options.Domain = config.MicrosoftDomain;
-                    options.CallbackPath = config.MicrosoftCallbackPath;
-                })
-                .EnableTokenAcquisitionToCallDownstreamApi(new List<string> { config.MicrosoftTokenAcquisitionScopes })
-                .AddMicrosoftGraph(options =>
-                {
-                    options.BaseUrl = config.MicrosoftGraphBaseUrl;
-                    options.Scopes = config.MicrosoftGraphScopes;
-                })
-                .AddInMemoryTokenCaches();
+            services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            })
+            // .AddCookie() // Ensure cookie-based persistence
+            .AddMicrosoftIdentityWebApp(options =>
+            {
+                options.ClientId = config.MicrosoftClientId;
+                options.ClientSecret = config.MicrosoftClientSecret;
+                options.TenantId = config.MicrosoftTenantId;
+                options.Instance = config.MicrosoftInstance;
+                options.Domain = config.MicrosoftDomain;
+                options.CallbackPath = config.MicrosoftCallbackPath;
+                
+                // Ensure tokens are saved after OIDC flow
+                options.SaveTokens = true;
+                
+                // Scopes (including offline_access for refresh tokens)
+                options.Scope.Add("openid");
+                options.Scope.Add("profile");
+                options.Scope.Add("offline_access");
 
+                // Token validation (customize as needed)
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                    RoleClaimType = "roles",
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    SaveSigninToken = true
+                };
+
+                // Event handlers to ensure persistent OIDC session
+                options.Events = new OpenIdConnectEvents
+                {
+                    OnTicketReceived = async context =>
+                    {
+                        var principal = context.Principal;
+                        var claimsIdentity = (ClaimsIdentity)principal.Identity;
+
+                        // Optional: Add additional claims to track OIDC authentication
+                        claimsIdentity.AddClaim(new Claim("oidc_authenticated", "true"));
+
+                        // Sign in with cookies to persist OIDC session
+                        await context.HttpContext.SignInAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme,
+                            new ClaimsPrincipal(claimsIdentity),
+                            context.Properties);
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        context.HandleResponse();
+                        context.Response.Redirect("/Account/Error?message=" + context.Response.ToString());
+                        return Task.CompletedTask;
+                    }
+                };
+            })
+            .EnableTokenAcquisitionToCallDownstreamApi(new List<string> { config.MicrosoftTokenAcquisitionScopes })
+            .AddMicrosoftGraph(options =>
+            {
+                options.BaseUrl = config.MicrosoftGraphBaseUrl;
+                options.Scopes = config.MicrosoftGraphScopes;
+            })
+            .AddInMemoryTokenCaches(); // Use Redis/DistributedCache in production
+
+            // Register Microsoft Graph service
             services.AddScoped<IMicrosoftGraph, MicrosoftGraphService>(serviceProvider =>
             {
                 var graphClient = serviceProvider.GetRequiredService<GraphServiceClient>();
-                return new MicrosoftGraphService(graphClient);
+                var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
+                var logger = serviceProvider.GetRequiredService<ILogger<MicrosoftGraphService>>();
+                
+                return new MicrosoftGraphService(graphClient, tokenAcquisition, logger);
             });
+
 
             return services;
         }
+
 
         public static IServiceCollection AddRoles(this IServiceCollection services, CustomConfigurationService config)
         {
@@ -98,12 +155,17 @@ namespace Capstone_360s.Utilities
                     .Build();
             });
 
-            services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>();
-
             services.AddTransient(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<RoleManagerService>>();
                 return new RoleManagerService(config.RolesDbConnection, logger);
+            });
+
+            services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>(sp => {
+                var logger = sp.GetRequiredService<ILogger<RoleClaimsTransformation>>();
+                var manager = sp.GetRequiredService<RoleManagerService>();
+
+                return new RoleClaimsTransformation(manager, logger);
             });
 
             return services;

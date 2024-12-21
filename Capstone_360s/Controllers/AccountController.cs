@@ -39,49 +39,43 @@ namespace Capstone_360s.Controllers
 
         public async Task<IActionResult> MicrosoftResponse(string returnUrl = null)
         {
-            // attempt authenticating with microsoft
             _logger.LogWarning("About to authenticate...");
+
+            // Authenticate the user using the OpenIdConnect scheme
             var authResult = await HttpContext.AuthenticateAsync(OpenIdConnectDefaults.AuthenticationScheme);
 
-            var claimsIdentity = new ClaimsIdentity(OpenIdConnectDefaults.AuthenticationScheme);
-
-            // are my cookies being signed in properly?
-            // var claimsIdentity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            foreach (var claim in authResult.Principal.Claims)
+            if (!authResult.Succeeded || authResult.Principal == null)
             {
-                claimsIdentity.AddClaim(claim);
+                _logger.LogError("Microsoft authentication failed.");
+                return Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, OpenIdConnectDefaults.AuthenticationScheme);
             }
 
-            // assign an application role
-            var idClaim = claimsIdentity.Claims.Where(x => x.Type == "uid").FirstOrDefault();
-            var emailClaim = claimsIdentity.Claims.Where(x => x.Type == ClaimTypes.Email).FirstOrDefault();
+            // Transfer claims to a new identity (Cookie Authentication Scheme)
+            var claimsIdentity = new ClaimsIdentity(
+                authResult.Principal.Claims, 
+                CookieAuthenticationDefaults.AuthenticationScheme
+            );
+
+            // Get user ID (uid) and fetch roles
+            var idClaim = claimsIdentity.FindFirst("uid");
             var roles = new List<string>();
 
             if (idClaim == null)
             {
-                throw new InvalidOperationException("User was unable to be authenticated.");
+                _logger.LogError("User ID claim (uid) is missing.");
+                throw new InvalidOperationException("User could not be authenticated.");
             }
 
             var result = await _roleManager.GetRoles(Guid.Parse(idClaim.Value));
-
-            if (result == null)
-            {
-                _logger.LogInformation("User has no specified role.");
-                roles.Add(RoleManagerService.MemberOnlyPolicy);
-            }
-            else
-            {
-                roles = result.ToList();
-            }
+            roles = result?.ToList() ?? new List<string> { RoleManagerService.MemberOnlyPolicy };
 
             foreach (var role in roles)
             {
-                _logger.LogInformation("User is in role: {0}", role);
+                _logger.LogInformation("Adding user to role: {0}", role);
                 claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
             }
 
-            // identify which 'User' the authenticated user is
+            // Identify the local user (internal mapping)
             try
             {
                 var localUserClaim = await IdentifyLocalUser();
@@ -91,30 +85,36 @@ namespace Capstone_360s.Controllers
                 }
                 else
                 {
-                    _logger.LogError("No local identity was found for the user.");
-                    return BadRequest("No local identity was found.");
+                    _logger.LogError("No local identity found for the user.");
+                    return BadRequest("No local identity found.");
                 }
             }
             catch (ServiceException ex)
             {
-                _logger.LogWarning("ServiceException encountered, prompting user to reauthenticate: {0}", ex.Message);
+                _logger.LogWarning("ServiceException encountered: {0}. Redirecting for reauthentication.", ex.Message);
                 return Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, OpenIdConnectDefaults.AuthenticationScheme);
             }
 
-            // Sign in the user with cookie authentication (?)
-            // var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-            // await HttpContext.SignInAsync(
-            //     CookieAuthenticationDefaults.AuthenticationScheme,
-            //     claimsPrincipal,
-            //     new AuthenticationProperties
-            //     {
-            //         IsPersistent = true, // Persist the cookie across sessions
-            //         ExpiresUtc = DateTime.UtcNow.AddHours(1) // Set cookie expiration
-            //     });
+            // Create a claims principal for the cookie session
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-            _logger.LogWarning("About to go back to the frontend...");
+            // Sign in to Cookies
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                claimsPrincipal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTime.UtcNow.AddHours(1)
+                });
+
+            // This redirect finalizes the OIDC session - DO NOT call SignInAsync for OIDC
+            _logger.LogWarning("User authenticated successfully. Redirecting...");
             return LocalRedirect(returnUrl ?? Url.Action(nameof(HomeController.Index), HomeController.Name));
         }
+
+
+
 
         private async Task<Claim> IdentifyLocalUser()
         {

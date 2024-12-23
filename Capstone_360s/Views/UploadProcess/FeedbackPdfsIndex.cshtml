@@ -2,6 +2,7 @@
 @using Capstone_360s.Models.FeedbackDb
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
+@inject IFeedbackDbServiceFactory factory
 
 @{
     ViewData["Title"] = "Round Feedback";
@@ -10,10 +11,11 @@
     var roundId = Context.Request.Query["roundId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+    var project = await factory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
 }
 
-<h1>@Model.ElementAt(0).Project.Name - Round @roundId PDFs</h1>
-@if (Model.Any())
+<h1>@project.Name - Round @roundId PDFs</h1>
+@if (Model.Any() && Model.ElementAt(0).Project.Name != null)
 {
     <p>
         <a class="btn btn-warning" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId"
@@ -59,6 +61,13 @@ else
 {
     <p>No PDFs found for this project.</p>
 }
+
+<div>
+    <br>
+    <div class="form-group">
+        <a class="btn btn-warning" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
+    </div>
+</div>
 
 
 @section Scripts {

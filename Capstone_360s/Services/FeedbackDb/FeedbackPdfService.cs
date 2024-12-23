@@ -63,12 +63,14 @@ namespace Capstone_360s.Services.FeedbackDb
 
             return await _dbSet.Include(x => x.Round)
                 .Include(x => x.Project)
+                .ThenInclude(x => x.Timeframe)
                 .Include(x => x.User)
                 .Where(f => f.UserId == Guid.Parse(userId)
                     && f.ProjectId == Guid.Parse(projectId) 
                     && f.RoundId == roundId 
                     && f.Project.TimeframeId == timeframeId 
-                    && f.Project.OrganizationId == Guid.Parse(organizationId))
+                    && f.Project.OrganizationId == Guid.Parse(organizationId)
+                    && !f.Project.Timeframe.IsArchived)
                 .ToListAsync();
         }
     }

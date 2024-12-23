@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Net;
+using Microsoft.Identity.Client;
 
 namespace Capstone_360s.Utilities
 {
@@ -33,6 +34,7 @@ namespace Capstone_360s.Utilities
             services.AddHttpClient("local", client => {
                 client.BaseAddress = new Uri("https://localhost:7068/");
             });
+            services.AddHttpContextAccessor();
             services.AddFeedbackDbServices(customConfiguration);
             services.AddMicrosoftAuth(customConfiguration);
             services.AddRoles(customConfiguration);
@@ -122,6 +124,7 @@ namespace Capstone_360s.Utilities
                         context.HttpContext.RequestServices
                             .GetService<ILogger<Program>>()
                             .LogInformation("Redirecting to Microsoft OIDC...");
+
                         return Task.CompletedTask;
                     },
                     OnTokenValidated = context =>
@@ -151,11 +154,12 @@ namespace Capstone_360s.Utilities
             // Register Microsoft Graph service
             services.AddScoped<IMicrosoftGraph, MicrosoftGraphService>(serviceProvider =>
             {
-                var graphClient = serviceProvider.GetRequiredService<GraphServiceClient>();
                 var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
+                var graphClient = serviceProvider.GetRequiredService<GraphServiceClient>();
+                var httpContext = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 var logger = serviceProvider.GetRequiredService<ILogger<MicrosoftGraphService>>();
                 
-                return new MicrosoftGraphService(graphClient, tokenAcquisition, logger);
+                return new MicrosoftGraphService(tokenAcquisition, graphClient, httpContext, logger);
             });
 
 

@@ -23,77 +23,86 @@
     <br /><br />
 </div>
 
-<div id="center-everything">
-    <div class="col-md-10">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Name)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.POCId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.ManagerId)
-                    </th>
-                    @if(isAdmin.Succeeded)
-                    {
+@if(Model.Any())
+{
+    <div id="center-everything">
+        <div class="col-md-10">
+            <table class="table">
+                <thead>
+                    <tr>
                         <th>
-                            @Html.DisplayNameFor(model => model.GDFolderId)
+                            @Html.DisplayNameFor(model => model.Name)
                         </th>
-                    }
-                    
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Name)
-                        </td>
-                        <td>
-                            @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
-                            {
-                                <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
-                            }
-                            else if(item.POCId == null)
-                            {
-                                <span>Not Assigned</span>
-                            }
-                            else
-                            {
-                                @item.POC.GetFullName()
-                            }
-                        </td>
-                        <td>
-                            @if(item.ManagerId == null)
-                            {
-                                <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
-                            }
-                            else
-                            {
-                                @item.Manager.GetFullName()
-                            }
-                        </td>
+                        <th>
+                            @Html.DisplayNameFor(model => model.POCId)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.ManagerId)
+                        </th>
                         @if(isAdmin.Succeeded)
                         {
-                            <td>
-                                <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                            </td>
+                            <th>
+                                @Html.DisplayNameFor(model => model.GDFolderId)
+                            </th>
                         }
                         
-                        <td>
-                            <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
-                        </td>
+                        <th></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Name)
+                            </td>
+                            <td>
+                                @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
+                                {
+                                    <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                }
+                                else if(item.POCId == null)
+                                {
+                                    <span>Not Assigned</span>
+                                }
+                                else
+                                {
+                                    @item.POC.GetFullName()
+                                }
+                            </td>
+                            <td>
+                                @if(item.ManagerId == null)
+                                {
+                                    <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                }
+                                else
+                                {
+                                    @item.Manager.GetFullName()
+                                }
+                            </td>
+                            @if(isAdmin.Succeeded)
+                            {
+                                <td>
+                                    <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                </td>
+                            }
+                            
+                            <td>
+                                <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+}
+else
+{
+    <p>
+        No project folders have been created yet. 
+    </p>
+}
 
 @if(!isAdmin.Succeeded)
 {

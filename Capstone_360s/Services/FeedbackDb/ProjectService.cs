@@ -12,15 +12,22 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger = logger;
         }
 
-        public async Task<IEnumerable<Project>> GetProjectsByTimeframeId(string organizationId, int timeframeId)
+        public async Task<IEnumerable<Project>> GetProjectsByTimeframeId(string organizationId, int timeframeId, bool isNotArchived = false)
         {
             _logger.LogInformation("Getting projects by organization id and timeframe id...");
+
+            var getArchive = new List<bool>();
+
+            getArchive = isNotArchived ? [false] : [true, false];
 
             var organizationIdToGuid = Guid.Parse(organizationId);
             var projects = await _dbSet.Include(x => x.Timeframe)
                 .Include(x => x.POC)
                 .Include(x => x.Manager)
-                .Where(p => p.OrganizationId == organizationIdToGuid && p.TimeframeId == timeframeId)
+                .Include(x => x.Timeframe)
+                .Where(p => p.OrganizationId == organizationIdToGuid 
+                    && p.TimeframeId == timeframeId
+                    && getArchive.Contains(p.Timeframe.IsArchived))
                 .ToListAsync();
             return projects;
         }
@@ -38,7 +45,12 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             _logger.LogInformation("Getting projects by ids...");
 
-            return await _dbSet.Include(x => x.POC).Include(x => x.Manager).Where(x => ids.Contains(x.Id)).ToListAsync();
+            return await _dbSet.Include(x => x.POC)
+                .Include(x => x.Manager)
+                .Include(x => x.Timeframe)
+                .Where(x => ids.Contains(x.Id) 
+                    && !x.Timeframe.IsArchived)
+                .ToListAsync();
         }
     }
 }

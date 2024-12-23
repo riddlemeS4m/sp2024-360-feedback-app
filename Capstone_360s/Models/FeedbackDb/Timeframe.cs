@@ -16,10 +16,12 @@ namespace Capstone_360s.Models.FeedbackDb
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [DisplayName("Start Date")]
         public DateTime? StartDate { get; set;  }
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [DisplayName("End Date")]
         public DateTime? EndDate { get; set; }
 
         [Required]

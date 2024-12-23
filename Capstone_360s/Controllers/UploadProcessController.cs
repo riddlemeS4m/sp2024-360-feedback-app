@@ -1,10 +1,11 @@
-﻿using System.Security.Claims;
-using Capstone_360s.Interfaces;
+﻿using Capstone_360s.Interfaces;
 using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Models.VMs;
 using Capstone_360s.Services.Configuration;
 using Capstone_360s.Services.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -64,7 +65,7 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var timeframeIds = (await _dbServiceFactory.TeamService.GetTimeframeIdsByTeamMember(User.FindFirst(ClaimTypes.NameIdentifier).Value, this.OrganizationId)).ToList();
+                var timeframeIds = (await _dbServiceFactory.TeamService.GetTimeframeIdsByTeamMember(User.FindFirst(x => x.Type == "uid").Value, this.OrganizationId)).ToList();
                 timeframes = (await _dbServiceFactory.TimeframeService.GetTimeframesByIds(timeframeIds)).ToList();
             }
 
@@ -137,7 +138,7 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var projectIds = (await _dbServiceFactory.TeamService.GetProjectIdsByTeamMember(User.FindFirst(ClaimTypes.NameIdentifier).Value, timeframeId, this.OrganizationId)).ToList();
+                var projectIds = (await _dbServiceFactory.TeamService.GetProjectIdsByTeamMember(User.FindFirst(x => x.Type == "uid").Value, timeframeId, this.OrganizationId)).ToList();
                 projects = (await _dbServiceFactory.ProjectService.GetProjectsByIds(projectIds)).ToList();
             }
 
@@ -160,7 +161,7 @@ namespace Capstone_360s.Controllers
                 });
             }
 
-            var projects = await _dbServiceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId);
+            var projects = await _dbServiceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId, true);
             if(projects.Count() >  0) 
             {
                 _logger.LogInformation("Returning rounds creation view...");
@@ -225,7 +226,7 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                pdfs = (await _dbServiceFactory.FeedbackPdfService.GetFeedbackPdfsByUserId(this.OrganizationId, timeframeId, projectId, roundId, User.FindFirst(ClaimTypes.NameIdentifier).Value)).ToList();
+                pdfs = (await _dbServiceFactory.FeedbackPdfService.GetFeedbackPdfsByUserId(this.OrganizationId, timeframeId, projectId, roundId, User.FindFirst(x => x.Type == "uid").Value)).ToList();
             }
 
             if(pdfs.Count == 0)
@@ -326,7 +327,12 @@ namespace Capstone_360s.Controllers
             var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
             if(user.Id == Guid.Empty)
             {
-                user = await _roleManager.AddNewUser(email);
+                try {
+                    user = await _roleManager.AddNewUser(email);
+                } 
+                catch (UnauthorizedAccessException ex) {
+                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                }
 
                 if(user.Id == Guid.Empty)
                 {
@@ -334,6 +340,24 @@ namespace Capstone_360s.Controllers
                 }
 
                 await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Sponsor);
+            }
+            else
+            {
+                if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
+                {
+                    try {
+                        user = await _roleManager.AddNewUser(email);
+                    } 
+                    catch (UnauthorizedAccessException ex) {
+                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                    } 
+                }
+
+                var roles = await _roleManager.GetRoles(user.Id);
+                if(!roles.Contains(_config.Sponsor))
+                {
+                    await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Sponsor);
+                }
             }
 
             project.POCId = user.Id;
@@ -417,7 +441,12 @@ namespace Capstone_360s.Controllers
             var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
             if(user.Id == Guid.Empty)
             {
-                user = await _roleManager.AddNewUser(email);
+                try {
+                    user = await _roleManager.AddNewUser(email);
+                } 
+                catch (UnauthorizedAccessException ex) {
+                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                }
 
                 if(user.Id == Guid.Empty)
                 {
@@ -425,6 +454,24 @@ namespace Capstone_360s.Controllers
                 }
 
                 await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Lead);
+            }
+            else
+            {
+                if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
+                {
+                    try {
+                        user = await _roleManager.AddNewUser(email);
+                    } 
+                    catch (UnauthorizedAccessException ex) {
+                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                    } 
+                }
+
+                var roles = await _roleManager.GetRoles(user.Id);
+                if(!roles.Contains(_config.Lead))
+                {
+                    await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Lead);
+                }
             }
 
             project.ManagerId = user.Id;

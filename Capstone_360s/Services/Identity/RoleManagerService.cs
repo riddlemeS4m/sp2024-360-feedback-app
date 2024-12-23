@@ -78,6 +78,11 @@ namespace Capstone_360s.Services.Identity
                     _logger.LogInformation("Disposing connection...");
                     await connection.DisposeAsync();
 
+                    if(!roles.Any())
+                    {
+                        _logger.LogInformation("User does not have any defined roles.");
+                    }
+
                     return roles;
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
@@ -104,7 +109,7 @@ namespace Capstone_360s.Services.Identity
 
         public async Task<IEnumerable<Capstone_360s.Models.FeedbackDb.User>> GetUsersByRole(string role)
         {
-            _logger.LogInformation("Getting users in role 'POC'");
+            _logger.LogInformation("Getting users by role...");
 
             int attempt = 0;
 
@@ -150,6 +155,10 @@ namespace Capstone_360s.Services.Identity
                     _logger.LogInformation("Disposing connection...");
                     await connection.DisposeAsync();
 
+                    if(!users.Any())
+                    {
+                        _logger.LogInformation("No users found with the specified role.");
+                    }
                     return users;
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
@@ -217,9 +226,13 @@ namespace Capstone_360s.Services.Identity
                 _logger.LogWarning("Microsoft Graph ServiceException: {0}", ex.Message);
                 return new Models.FeedbackDb.User();
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logger.LogError("An error occurred in AddNewUser: {0}", ex.Message);
+                _logger.LogError("An error occurred in AddNewUser: {0}, {1}", ex.GetType(), ex.Message);
                 return new Models.FeedbackDb.User();
             }
         }

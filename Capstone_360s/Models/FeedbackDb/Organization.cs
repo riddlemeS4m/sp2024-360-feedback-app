@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Capstone_360s.Models.FeedbackDb
@@ -16,6 +17,7 @@ namespace Capstone_360s.Models.FeedbackDb
         [Required]
         public string Type { get; set;}
         
+        [DisplayName("Google Drive Folder")]
         public string? GDFolderId { get; set; }
 
         [NotMapped]

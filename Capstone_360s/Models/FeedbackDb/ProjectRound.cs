@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,14 +21,15 @@ namespace Capstone_360s.Models.FeedbackDb
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
-        [Display(Name = "Release Date")]
+        [DisplayName("Release Date")]
         public DateTime? ReleaseDate { get; set; }
 
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
-        [Display(Name = "Due Date")]
+        [DisplayName("Due Date")]
         public DateTime? DueDate { get; set; }
 
+        [DisplayName("Google Drive Folder")]
         public string? GDFolderId { get; set;}
 
         public override string ToString()

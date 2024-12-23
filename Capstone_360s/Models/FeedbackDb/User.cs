@@ -35,5 +35,9 @@ namespace Capstone_360s.Models.FeedbackDb
             return $"{nameof(User)}: Id = {Id}, FirstName = {FirstName}, LastName = {LastName}, Email = {Email}, MicrosoftId = {MicrosoftId}";
         }
 
+        public string GetFullName()
+        {
+            return $"{FirstName} {LastName}";
+        }
     }
 }

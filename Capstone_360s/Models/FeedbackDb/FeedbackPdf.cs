@@ -16,9 +16,12 @@ namespace Capstone_360s.Models.FeedbackDb
         [ForeignKey(nameof(UserId))]
         public User User { get; set; }
 
+        [DisplayName("Team Member")]
         public string FileName { get; set; }
 
         public string ParentGDFolderId { get; set; }
+
+        [DisplayName("Google Drive Link")]
         public string GDFileId { get; set; }
 
         public Guid ProjectId { get; set; }
@@ -32,7 +35,8 @@ namespace Capstone_360s.Models.FeedbackDb
         public Round Round { get; set; }
 
         [DataType(DataType.DateTime)]
-        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd hh:mm tt}", ApplyFormatInEditMode = true)]
+        [DisplayFormat(DataFormatString = "{0:MM/dd/yy h:mm tt}", ApplyFormatInEditMode = true)]
+        [DisplayName("PDF Creation Time")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [NotMapped]

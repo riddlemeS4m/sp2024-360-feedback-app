@@ -1,64 +1,119 @@
 ﻿@using Capstone_360s.Interfaces
+@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.Timeframe>
 @inject IFeedbackDbServiceFactory feedbackDbServiceFactory
+@inject IAuthorizationService authorizationService
 
 @{
     ViewData["Title"] = "Timeframes";
 
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var organization = await feedbackDbServiceFactory.OrganizationService.GetByIdAsync(Guid.Parse(organizationId));
-
+    var isAuthorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
 }
 
-<h1>Welcome to @organization.Name!</h1>
-<h4>Select a timeframe below</h4>
-
-<p>
-    <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
-    <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create New</a>
-</p>
+<br />
+<h2>Welcome to @organization.Name!</h2>
+<div>
+    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Select the time period that you participated in this project or submitted feedback for."> Select a timeframe.</i>
+    <br /><br />
+</div>
 
 <div id="center-everything">
-<div class="col-md-8">
-    <table class="table">
-        <thead>
-            <tr>
-                @* <th>
-                @Html.DisplayNameFor(model => model.Id)
-            </th> *@
-                <th>
-                    @Html.DisplayNameFor(model => model.Name)
-                </th>
-                @* <th>
-                @Html.DisplayNameFor(model => model.GDFolderId)
-            </th> *@
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr onclick="navigateToSelect('@Url.Action("ProjectsIndex", new { organizationId = organizationId, timeframeId = item.Id })')">
-                    @* <td>
-                    @Html.DisplayFor(modelItem => item.Id)
-                </td> *@
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Name)
-                    </td>
-                    @* <td>
-                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                </td> *@
-                    <td>
-                        <a asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">Select</a>
-                    </td>
+    <div class="col-md-10">
+        <table class="table">
+            <thead>
+                <tr>
+                    @if(isAuthorized.Succeeded)
+                    {
+                        <th>
+                            @Html.DisplayNameFor(model => model.Id)
+                        </th>
+                    }
+                    
+                    <th>
+                        @Html.DisplayNameFor(model => model.Name)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.StartDate)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.EndDate)
+                    </th>
+                    @if(isAuthorized.Succeeded)
+                    {
+                        <th>
+                            @Html.DisplayNameFor(model => model.GDFolderId)
+                        </th>
+                    }
+                    
+                    <th></th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    @if(!item.IsArchived)
+                    {
+                        <tr onclick="navigateToSelect('@Url.Action("ProjectsIndex", new { organizationId = organizationId, timeframeId = item.Id })')">
+                            @if(isAuthorized.Succeeded)
+                            {
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Id)
+                                </td>
+                            }
+                            
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Name)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.StartDate)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.EndDate)
+                            </td>
+                            @if(isAuthorized.Succeeded)
+                            {
+                                <td>
+                                    <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                </td>
+                            }
+                            
+                            <td>
+                                <a class="select-link" asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">Select</a>
+                            </td>
+                        </tr>
+                    } 
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
+@if(!isAuthorized.Succeeded)
+{
+    <div>
+        <br>
+        <div class="form-group">
+            <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
+        </div>
+    </div>
+}
+else
+{
+<div class="form-group">
+        <br>
+        <p>
+            Don't see the organization you're looking for?
+        </p>
+        <p>
+            <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create New Timeframe</a> | 
+            <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
+        </p>
+    </div>
+}
 
 @section Scripts {
 

@@ -17,7 +17,11 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger.LogInformation("Getting projects by organization id and timeframe id...");
 
             var organizationIdToGuid = Guid.Parse(organizationId);
-            var projects = await _dbSet.Include(x => x.Timeframe).Where(p => p.OrganizationId == organizationIdToGuid && p.TimeframeId == timeframeId).ToListAsync();
+            var projects = await _dbSet.Include(x => x.Timeframe)
+                .Include(x => x.POC)
+                .Include(x => x.Manager)
+                .Where(p => p.OrganizationId == organizationIdToGuid && p.TimeframeId == timeframeId)
+                .ToListAsync();
             return projects;
         }
 
@@ -28,6 +32,13 @@ namespace Capstone_360s.Services.FeedbackDb
             var projects = await GetProjectsByTimeframeId(organizationId, timeframeId);
             var projectsDictionary = projects.ToDictionary(p => p.Name, p => p.Id);
             return projectsDictionary;
+        }
+
+        public async Task<IEnumerable<Project>> GetProjectsByIds(List<Guid> ids)
+        {
+            _logger.LogInformation("Getting projects by ids...");
+
+            return await _dbSet.Include(x => x.POC).Include(x => x.Manager).Where(x => ids.Contains(x.Id)).ToListAsync();
         }
     }
 }

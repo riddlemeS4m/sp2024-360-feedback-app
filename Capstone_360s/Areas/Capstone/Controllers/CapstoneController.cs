@@ -23,6 +23,7 @@ namespace Capstone_360s.Areas.Capstone.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
         public async Task<IActionResult> UploadRoster(IFormFile roster, DateTime filterDate, int roundId, [FromQuery] int timeframeId, [FromQuery] string organizationId)
         {

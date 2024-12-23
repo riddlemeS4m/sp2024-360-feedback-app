@@ -54,5 +54,48 @@ namespace Capstone_360s.Services.FeedbackDb
                 .ToListAsync();
             return teamMembers;
         }
+
+        public async Task<IEnumerable<int>> GetTimeframeIdsByTeamMember(string userId, string orgId)
+        {
+            _logger.LogInformation("Getting timeframe ids by user id and organization id...");
+
+            var userGuid = Guid.Parse(userId);
+            var orgGuid = Guid.Parse(orgId);
+
+            return await _dbSet
+                .Join(_context.Projects,
+                    t => t.ProjectId,
+                    p => p.Id,
+                    (t, p) => new { t, p })
+                .Where(tp => (tp.t.UserId == userGuid 
+                        || tp.p.POCId == userGuid
+                        || tp.p.ManagerId == userGuid)
+                        && tp.p.OrganizationId == orgGuid)
+                .Select(tp => tp.p.TimeframeId)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Guid>> GetProjectIdsByTeamMember(string userId, int timeframeId, string orgId)
+        {
+            _logger.LogInformation("Getting timeframe ids by user id and organization id...");
+
+            var userGuid = Guid.Parse(userId);
+            var orgGuid = Guid.Parse(orgId);
+
+            return await _dbSet
+                .Join(_context.Projects,
+                    t => t.ProjectId,
+                    p => p.Id,
+                    (t, p) => new { t, p })
+                .Where(tp => (tp.t.UserId == userGuid 
+                        || tp.p.POCId == userGuid
+                        || tp.p.ManagerId == userGuid)
+                        && tp.p.TimeframeId == timeframeId
+                        && tp.p.OrganizationId == orgGuid)
+                .Select(tp => tp.p.Id)
+                .Distinct()
+                .ToListAsync();
+        }
     }
 }

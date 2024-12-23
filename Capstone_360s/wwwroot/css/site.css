@@ -20,3 +20,78 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* .hero-container {
+  position: relative;
+  height: 100vh;
+  background: url('/Capstone_360s/wwwroot/favicon.png') no-repeat center center;
+  background-size: cover;
+} */
+
+
+.bg-dark {
+  --bs-bg-opacity: 1;
+  --bs-dark-rgb: 39, 43, 48;
+  background-color: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  color: rgba(0,0,0,0.9);
+  margin-top: 15%;
+}
+
+.btn-primary {
+  background-color: #0056b3;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #004494;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-danger {
+  background-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+h1, h2 {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e0e0e0;
+  display: inline-block;
+  padding-bottom: 0.5rem;
+}
+
+a.select-link {
+  color: #007bff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a.select-link:hover {
+  text-decoration: underline;
+}
+
+.bi-info-circle {
+  font-size: 1.2rem;
+  margin-left: 8px;
+  color: #007bff;
+  cursor: pointer;
+}

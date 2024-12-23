@@ -2,7 +2,6 @@
 @using Capstone_360s.Models.FeedbackDb
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
-@inject IFeedbackDbServiceFactory feedbackDbServiceFactory
 
 @{
     ViewData["Title"] = "Round Feedback";
@@ -11,11 +10,9 @@
     var roundId = Context.Request.Query["roundId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
-
-    var project = await feedbackDbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
 }
 
-<h1>@project.Name - Round @roundId PDFs</h1>
+<h1>@Model.ElementAt(0).Project.Name - Round @roundId PDFs</h1>
 @if (Model.Any())
 {
     <p>
@@ -30,11 +27,11 @@
             <thead>
                 <tr>
                     <th>
-                        @nameof(FeedbackPdf.FileName)
+                        @Html.DisplayNameFor(model => Model.ElementAt(0).FileName)
                     </th>
                     <th>
-                        @nameof(FeedbackPdf.CreatedAt)
-                    </th>
+                        @Html.DisplayNameFor(model => Model.ElementAt(0).CreatedAt)
+                </th>
                     <th></th>
                 </tr>
             </thead>

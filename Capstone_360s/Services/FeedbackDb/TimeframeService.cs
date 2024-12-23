@@ -20,5 +20,12 @@ namespace Capstone_360s.Services.FeedbackDb
             var timeframes = await _dbSet.Where(t => t.OrganizationId == idToGuid).ToListAsync();
             return timeframes;
         }
+
+        public async Task<IEnumerable<Timeframe>> GetTimeframesByIds(List<int> ids)
+        {
+            _logger.LogInformation("Getting timeframes by list of ids...");
+
+            return await _dbSet.Where(x => ids.Contains(x.Id)).ToListAsync();
+        }
     }
 }

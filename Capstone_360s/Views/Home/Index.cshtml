@@ -2,28 +2,21 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    @if (User.Identity?.IsAuthenticated ?? false)
-    {
-        <h1 class="display-4">Welcome, @User.Claims.Where(x => x.Type == "name").FirstOrDefault().Value</h1>
-        <div class="text-center">
-            <p>
-                <a class="btn btn-primary" asp-controller="Home" asp-action="LandingPage">View My Organizations</a>
-                @* <a class="btn btn-secondary" asp-controller="Account" asp-action="IdentifyLocalUser">Find Azure Id</a> *@
-                <a class="btn btn-success" asp-controller="Account" asp-action="Logout">Logout</a>
-
-            </p>
-        </div>
-    } 
-    else
-    {
-        <h1 class="display-4">Welcome</h1>
-        <div>
-            <p><a class="btn btn-success" asp-controller="Account" asp-action="Login">Login</a></p>
-        </div>
-    }
-    
-@*     <div class="index-image-container">
-        <img src="~/favicon.png" alt="Hewson Hall in the spiring" style="width: 80%">
-    </div> *@
+<div class="hero-container">
+    <div class="text-center hero-content">
+        @if (User.Identity?.IsAuthenticated ?? false)
+        {
+            <h1 class="display-3">Welcome, @User.Claims.Where(x => x.Type == "name").FirstOrDefault().Value!</h1>
+            <div class="mt-4">
+                <a class="btn btn-primary btn-lg me-3" asp-controller="Home" asp-action="LandingPage">Get Started</a>
+                @* <a class="btn btn-danger btn-lg" asp-controller="Account" asp-action="Logout">Logout</a> *@
+            </div>
+        }
+        else
+        {
+            <h1 class="display-3">Welcome to the 360 Feedback Portal</h1>
+            <p class="lead">A collaborative space to manage feedback effortlessly.</p>
+            @* <a class="btn btn-success btn-lg mt-3" asp-controller="Account" asp-action="Login">Login</a> *@
+        }
+    </div>
 </div>

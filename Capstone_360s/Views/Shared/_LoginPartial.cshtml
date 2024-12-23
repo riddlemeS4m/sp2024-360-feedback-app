@@ -1,0 +1,31 @@
+﻿@using Capstone_360s.Models.FeedbackDb;
+
+<ul class="navbar-nav">
+@if (User.Identity?.IsAuthenticated ?? false)
+{
+    @* <li class="nav-item" style="align-self: center;">
+            <a class="btn btn-outline-primary" asp-area="Identity" asp-page="/Account/Manage/Index" title="View Profile">View Profile</a>
+    </li> *@
+    <li class="nav-item" style="align-self: center;">
+        <form  class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                <button type="submit" class="btn btn-danger ms-2 ms-lg-3" style="width: 100px; margin-right: 10px;">Log Out</button>
+        </form>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <form id="external-account" asp-controller="Account" asp-action="Login" asp-route-returnUrl="/Home/LandingPage" method="post" class="form-horizontal">
+            <div>
+                <p>
+                    <div class="form-group" style="display: flex; justify-content: center;">
+                        <button type="submit" class="btn btn-danger" style="width: 100px; margin-right: 10px;" name="provider" value="Microsoft" title="Log in using your Microsoft account">Log In</button>
+                    </div>
+                </p>
+            </div>
+        </form>
+    </li>
+}
+</ul>
+
+

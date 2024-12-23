@@ -1,0 +1,41 @@
+@model Capstone_360s.Models.VMs.AssignPOCVM
+
+@{
+    ViewData["Title"] = "Assign Point of Contact";
+}
+
+<h4>Assign Point of Contact to @Model.Project.Name</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="AssignPOC">
+            <div class="text-danger"></div>
+            <input type="hidden" name="projectId" value="@Model.Project.Id" />
+            <div class="form-group">
+                <label for="POCEmail" class="control-label">Email</label>
+                <input name="POCEmail" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span for="POCEmail" class="text-danger"></span>
+            </div>
+            <br />
+            @if(Model.POCs.Count != 0)
+            {
+                <!-- Dropdown for SelectListItems -->
+                <div class="form-group">
+                    <label for="SelectedPOC" class="control-label">Select Point of Contact</label>
+                    <select name="SelectedPOC" class="form-control">
+                        <option value="">-- Select a POC --</option>
+                        @foreach (var poc in Model.POCs)
+                        {
+                            <option value="@poc.Value">@poc.Text</option>
+                        }
+                    </select>
+                </div>
+            }
+            <br />
+            <div class="form-group">
+                <input type="submit" value="Assign" class="btn btn-primary" /> | 
+                <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-timeframeId="@Model.Project.TimeframeId" asp-route-organizationId="@Model.Project.OrganizationId">Back</a>
+            </div>
+        </form>
+    </div>
+</div>

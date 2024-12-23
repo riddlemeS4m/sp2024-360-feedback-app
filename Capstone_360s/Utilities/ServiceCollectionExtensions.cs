@@ -30,9 +30,12 @@ namespace Capstone_360s.Utilities
     {
         public static IServiceCollection AddCustomServices(this IServiceCollection services, CustomConfigurationService customConfiguration)
         {
+            services.AddHttpClient("local", client => {
+                client.BaseAddress = new Uri("https://localhost:7068/");
+            });
+            services.AddFeedbackDbServices(customConfiguration);
             services.AddMicrosoftAuth(customConfiguration);
             services.AddRoles(customConfiguration);
-            services.AddFeedbackDbServices(customConfiguration);
             services.AddGoogleDrive(customConfiguration);
             services.AddSendGrid(customConfiguration);
             services.AddControllerManagers();
@@ -176,10 +179,12 @@ namespace Capstone_360s.Utilities
                     .Build();
             });
 
-            services.AddSingleton<IRoleManager, RoleManagerService>(provider =>
+            services.AddScoped<IRoleManager, RoleManagerService>(provider =>
             {
+                var graph = provider.GetRequiredService<IMicrosoftGraph>();
+                var factory = provider.GetRequiredService<IFeedbackDbServiceFactory>();
                 var logger = provider.GetRequiredService<ILogger<RoleManagerService>>();
-                return new RoleManagerService(config.RolesDbConnection, logger);
+                return new RoleManagerService(config, graph, factory, logger);
             });
 
             services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>(sp => {

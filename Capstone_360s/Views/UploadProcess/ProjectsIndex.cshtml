@@ -1,7 +1,10 @@
 ﻿@using Capstone_360s.Interfaces
+@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.Project>
 @inject IFeedbackDbServiceFactory feedbackDbServiceFactory
+@inject IAuthorizationService authorizationService
 
 @{
     ViewData["Title"] = "Projects";
@@ -9,48 +12,113 @@
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
+    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
 }
 
-<h1>@timeframe.Name Projects</h1>
-<h4>Select a project below</h4>
-
-<p>
-    <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
-    <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New</a>
-    <a class="btn btn-secondary" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Rounds</a>
-    <a class="btn btn-success" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a>
-</p>
-<div class="col-md-6">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>
-                    @Html.DisplayNameFor(model => model.Name)
-                </th>
-                @* <th>
-                @Html.DisplayNameFor(model => model.GDFolderId)
-            </th> *@
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Name)
-                    </td>
-                    @* <td>
-                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                </td> *@
-                    <td>
-                        <a asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+<br />
+<h2>Your Projects in <span style="color:#007bff;">@timeframe.Name</span></h2>
+<div>
+    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Select the project that you participated in or submitted feedback for."> Select a project.</i>
+    <br /><br />
 </div>
+
+<div id="center-everything">
+    <div class="col-md-10">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Name)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.POCId)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.ManagerId)
+                    </th>
+                    @if(isAdmin.Succeeded)
+                    {
+                        <th>
+                            @Html.DisplayNameFor(model => model.GDFolderId)
+                        </th>
+                    }
+                    
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Name)
+                        </td>
+                        <td>
+                            @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
+                            {
+                                <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                            }
+                            else if(item.POCId == null)
+                            {
+                                <span>Not Assigned</span>
+                            }
+                            else
+                            {
+                                @item.POC.GetFullName()
+                            }
+                        </td>
+                        <td>
+                            @if(item.ManagerId == null)
+                            {
+                                <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                            }
+                            else
+                            {
+                                @item.Manager.GetFullName()
+                            }
+                        </td>
+                        @if(isAdmin.Succeeded)
+                        {
+                            <td>
+                                <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                            </td>
+                        }
+                        
+                        <td>
+                            <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if(!isAdmin.Succeeded)
+{
+    <div>
+        <br>
+        <div class="form-group">
+            <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+       </div>
+    </div>
+}
+else
+{
+<div class="form-group">
+        <br>
+        <p>
+            Don't see the timeframe you're looking for?
+        </p>
+        <p>
+            <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
+            <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a>
+            <a class="btn btn-success" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a> | 
+            <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+        </p>
+    </div>
+}
 
 
 @section Scripts {

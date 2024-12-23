@@ -113,9 +113,6 @@ namespace Capstone_360s.Controllers
             return LocalRedirect(returnUrl ?? Url.Action(nameof(HomeController.Index), HomeController.Name));
         }
 
-
-
-
         private async Task<Claim> IdentifyLocalUser()
         {
             var email = User.Claims.FirstOrDefault(x => x.Type == "preferred_username")?.Value
@@ -177,7 +174,7 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(HomeController.Index), HomeController.Name);
         }
 
-        public async Task<IActionResult> AccessDenied()
+        public IActionResult AccessDenied()
         {
             return View();
         }

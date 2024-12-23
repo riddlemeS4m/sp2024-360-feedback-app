@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Capstone_360s.Models.FeedbackDb
@@ -28,16 +29,19 @@ namespace Capstone_360s.Models.FeedbackDb
         [ForeignKey(nameof(TimeframeId))]
         public Timeframe Timeframe { get; set; }
 
+        [DisplayName("Point of Contact")]
         public Guid? POCId { get; set; }
 
         [ForeignKey(nameof(POCId))]
         public User? POC { get; set; }
 
+        [DisplayName("Google Drive Folder")]
         public string? GDFolderId { get; set; }
 
         [Required]
         public int NoOfRounds { get; set; }
 
+        [DisplayName("Project Manager")]
         public Guid? ManagerId { get; set; }
 
         [ForeignKey(nameof(ManagerId))]

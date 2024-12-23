@@ -28,6 +28,7 @@ namespace Capstone_360s.Models.FeedbackDb
         [ForeignKey(nameof(OrganizationId))]
         public Organization Organization { get; set; }
 
+        [DisplayName("Google Drive Folder")]
         public string? GDFolderId { get; set; }
 
         [Required]

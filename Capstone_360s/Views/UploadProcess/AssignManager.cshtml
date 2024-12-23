@@ -1,0 +1,41 @@
+@model Capstone_360s.Models.VMs.AssignPOCVM
+
+@{
+    ViewData["Title"] = "Assign Project Manager";
+}
+
+<h4>Assign Project Manager to @Model.Project.Name</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="AssignManager">
+            <div class="text-danger"></div>
+            <input type="hidden" name="projectId" value="@Model.Project.Id" />
+            <div class="form-group">
+                <label for="ManagerEmail" class="control-label">Email</label>
+                <input name="ManagerEmail" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span for="ManagerEmail" class="text-danger"></span>
+            </div>
+            <br />
+            @if(Model.POCs.Count != 0)
+            {
+                <!-- Dropdown for SelectListItems -->
+                <div class="form-group">
+                    <label for="SelectedManager" class="control-label">Or, Select Manager</label>
+                    <select name="SelectedManager" class="form-control">
+                        <option value="">-- Select a POC --</option>
+                        @foreach (var poc in Model.POCs)
+                        {
+                            <option value="@poc.Value">@poc.Text</option>
+                        }
+                    </select>
+                </div>
+            }
+            <br />
+            <div class="form-group">
+                <input type="submit" value="Assign" class="btn btn-primary" /> | 
+                <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-timeframeId="@Model.Project.TimeframeId" asp-route-organizationId="@Model.Project.OrganizationId">Back</a>
+            </div>
+        </form>
+    </div>
+</div>

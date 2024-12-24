@@ -30,6 +30,7 @@ namespace Capstone_360s.Services.Identity
                 {
                     _logger.LogWarning("No existing roles were found.");
                     var userId = identity.FindFirst("uid")?.Value;
+
                     if (!string.IsNullOrEmpty(userId))
                     {
                         var roles = await _roleService.GetRoles(Guid.Parse(userId));

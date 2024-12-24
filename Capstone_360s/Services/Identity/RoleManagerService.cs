@@ -107,7 +107,7 @@ namespace Capstone_360s.Services.Identity
             return new List<string>();  // Fallback if retries exhausted
         }
 
-        public async Task<IEnumerable<Capstone_360s.Models.FeedbackDb.User>> GetUsersByRole(string role)
+        public async Task<IEnumerable<Capstone_360s.Models.FeedbackDb.User>> GetUsersByRole(string organizationId, string role)
         {
             _logger.LogInformation("Getting users by role...");
 
@@ -159,7 +159,19 @@ namespace Capstone_360s.Services.Identity
                     {
                         _logger.LogInformation("No users found with the specified role.");
                     }
-                    return users;
+
+                    var orgUsers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(organizationId));
+
+                    var returnedUsers = new List<Capstone_360s.Models.FeedbackDb.User>();
+                    foreach(var user in users)
+                    {
+                        if(orgUsers.Any(u => u.UserId == user.Id))
+                        {
+                            returnedUsers.Add(user);
+                        }
+                    }
+
+                    return returnedUsers;
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
                 {
@@ -183,7 +195,7 @@ namespace Capstone_360s.Services.Identity
             return new List<Capstone_360s.Models.FeedbackDb.User>();  // Fallback if retries exhausted
         }
 
-        public async Task<Capstone_360s.Models.FeedbackDb.User> AddNewUser(string email)
+        public async Task<Capstone_360s.Models.FeedbackDb.User> AddNewUser(string organizationId, string email)
         {
             if (string.IsNullOrEmpty(email))
             {
@@ -207,7 +219,18 @@ namespace Capstone_360s.Services.Identity
                         Email = email
                     };
 
-                    await _dbServiceFactory.UserService.AddAsync(user);
+                    user = await _dbServiceFactory.UserService.AddAsync(user);
+
+                    var userOrgs = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(user.Id);
+
+                    if(!userOrgs.Any(x => x.OrganizationId == Guid.Parse(organizationId)))
+                    {
+                        await _dbServiceFactory.UserOrganizationService.AddAsync(new Models.FeedbackDb.UserOrganization {
+                            UserId = user.Id,
+                            OrganizationId = Guid.Parse(organizationId)
+                        });
+                    }
+                    
                     return user;
                 }
                 else
@@ -215,8 +238,18 @@ namespace Capstone_360s.Services.Identity
                     if (localUser.MicrosoftId == Guid.Empty || localUser.MicrosoftId == null)
                     {
                         localUser.MicrosoftId = Guid.Parse(microsoftUser.Id);
-                        await _dbServiceFactory.UserService.UpdateAsync(localUser);
-                    }
+                        localUser = await _dbServiceFactory.UserService.UpdateAsync(localUser);
+
+                        var userOrgs = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(localUser.Id);
+
+                        if(!userOrgs.Any(x => x.OrganizationId == Guid.Parse(organizationId)))
+                        {
+                            await _dbServiceFactory.UserOrganizationService.AddAsync(new Models.FeedbackDb.UserOrganization {
+                                UserId = localUser.Id,
+                                OrganizationId = Guid.Parse(organizationId)
+                            });
+                        }
+                    }                    
 
                     return localUser;
                 }   
@@ -237,9 +270,18 @@ namespace Capstone_360s.Services.Identity
             }
         }
 
-        public async Task AddUserToRole(string id, string role)
+        public async Task AddUserToRole(string organizationId, string userId, string role)
         {
             _logger.LogInformation("Getting users in role 'POC'");
+
+            var roles = await GetRoles(Guid.Parse(userId));
+            var roleExists = roles.Contains(role);
+
+            if(roleExists)
+            {
+                _logger.LogInformation("User is already in role");
+                return;
+            }
 
             int attempt = 0;
 
@@ -267,7 +309,7 @@ namespace Capstone_360s.Services.Identity
 
                     _logger.LogInformation("Adding parameters...");
                     command.Parameters.AddWithValue("@role", role);
-                    command.Parameters.AddWithValue("@user", id);
+                    command.Parameters.AddWithValue("@user", userId);
 
                     _logger.LogInformation("Executing writer...");
                     await command.ExecuteNonQueryAsync();

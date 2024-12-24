@@ -65,7 +65,12 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var timeframeIds = (await _dbServiceFactory.TeamService.GetTimeframeIdsByTeamMember(User.FindFirst(x => x.Type == "uid").Value, this.OrganizationId)).ToList();
+                var userId = User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value;
+                var localUserId = User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value;
+
+                userId = userId == localUserId ? userId : localUserId;
+
+                var timeframeIds = (await _dbServiceFactory.TeamService.GetTimeframeIdsByTeamMember(userId, this.OrganizationId)).ToList();
                 timeframes = (await _dbServiceFactory.TimeframeService.GetTimeframesByIds(timeframeIds)).ToList();
             }
 
@@ -138,12 +143,261 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var projectIds = (await _dbServiceFactory.TeamService.GetProjectIdsByTeamMember(User.FindFirst(x => x.Type == "uid").Value, timeframeId, this.OrganizationId)).ToList();
+                var userId = User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value;
+                var localUserId = User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value;
+
+                userId = userId == localUserId ? userId : localUserId;
+
+                var projectIds = (await _dbServiceFactory.TeamService.GetProjectIdsByTeamMember(userId, timeframeId, this.OrganizationId)).ToList();
                 projects = (await _dbServiceFactory.ProjectService.GetProjectsByIds(projectIds)).ToList();
             }
 
             _logger.LogInformation("Returning projects selection view...");
             return View(projects);
+        }
+
+        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        public async Task<IActionResult> ProjectEdit(int timeframeId, string projectId)
+        {
+            if(timeframeId == 0 || string.IsNullOrEmpty(projectId))
+            {
+                _logger.LogWarning("No timeframe or project id was specified.");
+                return BadRequest();
+            }
+
+            var project = await _dbServiceFactory.ProjectService.GetProjectAndTeamMembersById(projectId);
+
+            if(project == null)
+            {
+                _logger.LogWarning("Project with id {projectId} was not found.", projectId);
+                return NotFound();
+            }
+
+            var currentTeamMemberIds = project.TeamMembers.Select(x => x.UserId);
+
+            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
+            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+            var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
+
+            var pocItems = pocs.OrderBy(x => x.FirstName)
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.FirstName} {x.LastName}",
+                    Value = x.Email
+                }).ToList();
+            var managerItems = managers.OrderBy(x => x.FirstName)
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.FirstName} {x.LastName}",
+                    Value = x.Email
+                })
+                .ToList();
+            var memberItems = teamMembers.OrderBy(x => x.User.FirstName)
+                .Where(x => !currentTeamMemberIds.Contains(x.UserId))
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.User.FirstName} {x.User.LastName}",
+                    Value = x.User.Email
+                })
+                .ToList();
+
+            var vm = new ProjectEditVM()
+            {
+                PotentialPOCs = pocItems ?? [],
+                PotentialManagers = managerItems ?? [],
+                PotentialTeamMembers = memberItems ?? [],
+                Project = project
+            };
+
+            _logger.LogInformation("Returning project edit view...");
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        public async Task<IActionResult> ProjectEdit(ProjectEditVM vm, string POCEmail, string ManagerEmail, string NewTeamMembers)
+        {
+            var newProject = vm.Project;
+
+            if(newProject == null || newProject.Id == Guid.Empty)
+            {
+                _logger.LogWarning("Received project was empty.");
+                return BadRequest();
+            }
+
+            var oldProject = await _dbServiceFactory.ProjectService.GetProjectAndTeamMembersById(newProject.Id.ToString());
+
+            if(oldProject == null)
+            {
+                _logger.LogWarning("Can't find the old project.");
+                return BadRequest();
+            }
+
+            var currentTeamMemberIds = oldProject.TeamMembers.Select(x => x.UserId);
+                      
+
+            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
+            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+            var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
+
+            var pocItems = pocs.OrderBy(x => x.FirstName)
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.FirstName} {x.LastName}",
+                    Value = x.Email
+                })
+                .ToList();
+            var managerItems = managers.OrderBy(x => x.FirstName)
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.FirstName} {x.LastName}",
+                    Value = x.Email
+                })
+                .ToList();
+            var memberItems = teamMembers.OrderBy(x => x.User.FirstName)
+                .Where(x => !currentTeamMemberIds.Contains(x.UserId))
+                .Select(x => new SelectListItem { 
+                    Text = $"{x.User.FirstName} {x.User.LastName}",
+                    Value = x.User.Email
+                })
+                .ToList();
+
+            vm.PotentialPOCs = pocItems ?? [];
+            vm.PotentialManagers = managerItems ?? [];
+            vm.PotentialTeamMembers = memberItems ?? [];
+            vm.Project.TeamMembers = oldProject.TeamMembers;   
+
+            var pocCondition = oldProject.POC.Email != POCEmail && !string.IsNullOrEmpty(POCEmail);
+            var managerCondition =  oldProject.Manager.Email != ManagerEmail && !string.IsNullOrEmpty(ManagerEmail);        
+
+            oldProject.Name = oldProject.Name != newProject.Name && !string.IsNullOrEmpty(newProject.Name) ? newProject.Name : oldProject.Name;
+            oldProject.Description = oldProject.Description != newProject.Description && !string.IsNullOrEmpty(newProject.Description) ? newProject.Description : oldProject.Description;
+
+            if(pocCondition)
+            {
+                try {
+                    oldProject.POC = await _roleManager.AddNewUser(this.OrganizationId, POCEmail);
+                }
+                catch {
+                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
+                }
+                
+                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.POC.Id.ToString(), _config.Sponsor);
+            }
+
+            if(managerCondition)
+            {
+                try {
+                    oldProject.Manager = await _roleManager.AddNewUser(this.OrganizationId, ManagerEmail);
+                }
+                catch {
+                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
+                }
+
+                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.Manager.Id.ToString(), _config.Lead);
+            }
+
+            if(string.IsNullOrEmpty(NewTeamMembers))
+            {
+                ModelState.AddModelError("Project.NoOfMembers", "Number of members and number of selected members did not match.");
+                _logger.LogWarning("Did not get expected list of team members.");
+                return View(vm);
+            }
+
+            var newTeamMembers = NewTeamMembers.Split(",").ToList();
+
+            if(newTeamMembers.Count != newProject.NoOfMembers && newProject.NoOfMembers != 0)
+            {
+                ModelState.AddModelError("Project.NoOfMembers", "Number of members and number of selected members did not match.");
+                _logger.LogWarning("Number of requested team members didn't team members received.");
+                return View(vm);
+            }
+
+            if(newTeamMembers.Count < 2 && newProject.NoOfMembers != 0)
+            {
+                ModelState.AddModelError("NewTeamMembers", "There must be at least 2 members on this team.");
+                _logger.LogWarning("Number of requested team members was less than 2.");
+                return View(vm);
+            }
+
+            var oldTeamMembers = oldProject.TeamMembers.Select(x => x.User.Email).ToList();
+
+            if(newTeamMembers.Count > 0 && oldTeamMembers.Count >= 0)
+            {
+                foreach(var email in newTeamMembers)
+                {
+                    if(oldTeamMembers.Count == 0 || !oldTeamMembers.Contains(email))
+                    {
+                        var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
+                        if(user.Id == Guid.Empty)
+                        {
+                            try {
+                                user = await _roleManager.AddNewUser(this.OrganizationId, email);
+                            } 
+                            catch (UnauthorizedAccessException ex) {
+                                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
+                            }
+
+                            if(user.Id == Guid.Empty)
+                            {
+                                return BadRequest($"Couldn't add user");
+                            }
+                        }
+                        else
+                        {
+                            if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
+                            {
+                                try {
+                                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
+                                } 
+                                catch (UnauthorizedAccessException ex) {
+                                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
+                                } 
+                            }
+                        }
+
+                        await _dbServiceFactory.TeamService.AddAsync(new TeamMember {
+                            UserId = user.Id,
+                            ProjectId = oldProject.Id,
+                        });
+                    }
+                }
+            }
+
+            if(newTeamMembers.Count >= 0 && oldTeamMembers.Count > 0)
+            {
+                foreach(var email in oldTeamMembers)
+                {
+                    if(!newTeamMembers.Contains(email))
+                    {
+                        var teamMember = oldProject.TeamMembers.Where(x => x.User.Email == email).FirstOrDefault();
+                        await _dbServiceFactory.TeamService.Remove(teamMember);
+                    }
+                }
+            }
+
+            oldProject.NoOfMembers = oldProject.NoOfMembers != newTeamMembers.Count ? newTeamMembers.Count : oldProject.NoOfMembers;
+
+            if(newProject.NoOfRounds < oldProject.NoOfRounds && newProject.NoOfRounds != 0)
+            {
+                ModelState.AddModelError("Project.NoOfRounds", "Number of rounds can't be less than the number of existing round folders.");
+                _logger.LogWarning("Number of round folders requested is less than the number of round folders already specified.");
+                return View(vm);
+            }
+
+            if(newProject.NoOfRounds != oldProject.Timeframe.NoOfRounds && newProject.NoOfRounds != 0)
+            {
+                ModelState.AddModelError("Project.NoOfRounds", "This timeframe already requires {oldProject.Timeframe.NoOfRounds} rounds.");
+                _logger.LogWarning("Can't create more round folders than have already been specified by the timeframe.");
+                return View(vm);
+            }
+
+            if(oldProject.NoOfRounds < newProject.NoOfRounds && newProject.NoOfRounds != 0)
+            {
+                oldProject.NoOfRounds = newProject.NoOfRounds;
+                await _manager.CreateProjectRoundsForOneProject(oldProject);
+            }
+
+            await _dbServiceFactory.ProjectService.UpdateAsync(oldProject);
+
+            _logger.LogInformation("Completed editing project, returning to the projects index...");
+            return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = vm.Project.TimeframeId, projectId = vm.Project.Id });
         }
 
         [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
@@ -226,7 +480,12 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                pdfs = (await _dbServiceFactory.FeedbackPdfService.GetFeedbackPdfsByUserId(this.OrganizationId, timeframeId, projectId, roundId, User.FindFirst(x => x.Type == "uid").Value)).ToList();
+                var userId = User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value;
+                var localUserId = User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value;
+
+                userId = userId == localUserId ? userId : localUserId;
+
+                pdfs = (await _dbServiceFactory.FeedbackPdfService.GetFeedbackPdfsByUserId(this.OrganizationId, timeframeId, projectId, roundId, userId)).ToList();
             }
 
             if(pdfs.Count == 0)
@@ -266,7 +525,7 @@ namespace Capstone_360s.Controllers
                 Project = project,
             };
 
-            var users = await _roleManager.GetUsersByRole(_config.Sponsor);
+            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
             var items = new List<SelectListItem>();
 
             if(users != null)
@@ -299,7 +558,7 @@ namespace Capstone_360s.Controllers
 
             if(string.IsNullOrEmpty(POCEmail) && string.IsNullOrEmpty(SelectedPOC))
             {
-                var pocs = await _roleManager.GetUsersByRole(_config.Sponsor);
+                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
                 var items = new List<SelectListItem>();
 
                 if(pocs != null)
@@ -328,7 +587,7 @@ namespace Capstone_360s.Controllers
             if(user.Id == Guid.Empty)
             {
                 try {
-                    user = await _roleManager.AddNewUser(email);
+                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
                 } 
                 catch (UnauthorizedAccessException ex) {
                     return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
@@ -339,14 +598,14 @@ namespace Capstone_360s.Controllers
                     return BadRequest($"Couldn't add user");
                 }
 
-                await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Sponsor);
+                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Sponsor);
             }
             else
             {
                 if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
                 {
                     try {
-                        user = await _roleManager.AddNewUser(email);
+                        user = await _roleManager.AddNewUser(this.OrganizationId, email);
                     } 
                     catch (UnauthorizedAccessException ex) {
                         return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
@@ -356,7 +615,7 @@ namespace Capstone_360s.Controllers
                 var roles = await _roleManager.GetRoles(user.Id);
                 if(!roles.Contains(_config.Sponsor))
                 {
-                    await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Sponsor);
+                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Sponsor);
                 }
             }
 
@@ -381,7 +640,7 @@ namespace Capstone_360s.Controllers
                 Project = project,
             };
 
-            var users = await _roleManager.GetUsersByRole(_config.Lead);
+            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
             var items = new List<SelectListItem>();
 
             if(users != null)
@@ -416,7 +675,7 @@ namespace Capstone_360s.Controllers
 
             if(string.IsNullOrEmpty(ManagerEmail) && string.IsNullOrEmpty(SelectedManager))
             {
-                var pocs = await _roleManager.GetUsersByRole(_config.Lead);
+                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
                 var items = new List<SelectListItem>();
 
                 if(pocs != null)
@@ -442,10 +701,10 @@ namespace Capstone_360s.Controllers
             if(user.Id == Guid.Empty)
             {
                 try {
-                    user = await _roleManager.AddNewUser(email);
+                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
                 } 
                 catch (UnauthorizedAccessException ex) {
-                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignManager?projectId={projectId}"});
                 }
 
                 if(user.Id == Guid.Empty)
@@ -453,24 +712,24 @@ namespace Capstone_360s.Controllers
                     return View(vm);
                 }
 
-                await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Lead);
+                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Lead);
             }
             else
             {
                 if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
                 {
                     try {
-                        user = await _roleManager.AddNewUser(email);
+                        user = await _roleManager.AddNewUser(this.OrganizationId, email);
                     } 
                     catch (UnauthorizedAccessException ex) {
-                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
+                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignManager?projectId={projectId}"});
                     } 
                 }
 
                 var roles = await _roleManager.GetRoles(user.Id);
                 if(!roles.Contains(_config.Lead))
                 {
-                    await _roleManager.AddUserToRole(user.MicrosoftId.ToString(), _config.Lead);
+                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Lead);
                 }
             }
 

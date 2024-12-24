@@ -69,9 +69,17 @@ namespace Capstone_360s.Services.FeedbackDb
                 return false;
             }
 
+            _dbSet.Attach(entity);
             _dbSet.Remove(entity);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task Remove(T entity)
+        {
+            _dbSet.Attach(entity);
+            _dbSet.Remove(entity);
+            await _context.SaveChangesAsync();
         }
     }
 }

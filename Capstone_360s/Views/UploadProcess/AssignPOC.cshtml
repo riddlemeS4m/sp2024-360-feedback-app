@@ -1,6 +1,7 @@
 @model Capstone_360s.Models.VMs.AssignPOCVM
 
 @{
+    var pattern = @"/^[^@]+@[^@]+ua\.edu$/";
     ViewData["Title"] = "Assign Point of Contact";
 }
 
@@ -13,8 +14,8 @@
             <input type="hidden" name="projectId" value="@Model.Project.Id" />
             <div class="form-group">
                 <label for="POCEmail" class="control-label">Email</label>
-                <input name="POCEmail" class="form-control" placeholder="Individual's UA-issued email"/>
-                <span for="POCEmail" class="text-danger"></span>
+                <input id="pocEmail" name="POCEmail" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span id="pocEmailError" for="POCEmail" class="text-danger"></span>
             </div>
             <br />
             @if(Model.POCs.Count != 0)
@@ -22,7 +23,7 @@
                 <!-- Dropdown for SelectListItems -->
                 <div class="form-group">
                     <label for="SelectedPOC" class="control-label">Select Point of Contact</label>
-                    <select name="SelectedPOC" class="form-control">
+                    <select id="pocDropdown" name="SelectedPOC" class="form-control">
                         <option value="">-- Select a POC --</option>
                         @foreach (var poc in Model.POCs)
                         {
@@ -33,9 +34,59 @@
             }
             <br />
             <div class="form-group">
-                <input type="submit" value="Assign" class="btn btn-primary" /> | 
+                <input id="assign-button" type="submit" value="Assign" class="btn btn-primary" /> | 
                 <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-timeframeId="@Model.Project.TimeframeId" asp-route-organizationId="@Model.Project.OrganizationId">Back</a>
             </div>
         </form>
     </div>
 </div>
+
+@section Scripts
+{
+    <script>
+        // Helper function to populate input field
+        function populateInput(dropdownId, inputId) {
+            const dropdown = document.getElementById(dropdownId);
+            const input = document.getElementById(inputId);
+
+            if(dropdown !== null && input !== null)
+            {
+                dropdown.addEventListener('change', function() {
+                    input.value = this.value;  // Set input value to selected option value
+                });
+            }
+        }
+
+        // Attach event listeners for each dropdown
+        populateInput('pocDropdown', 'pocEmail');
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const pocEmail = document.getElementById('pocEmail');
+            const pocEmailError = document.getElementById('pocEmailError');
+            const saveButton = document.getElementById('assign-button');
+
+            function validateSaveButton() {
+                const isPocEmailValid = validateEmail(pocEmail.value, pocEmailError);
+                saveButton.disabled = !((isPocEmailValid || pocEmail.value === ""));
+            }
+
+            // Email Validation Logic
+            function validateEmail(email, error) {
+                const pattern = @Html.Raw(@pattern);
+                if (pattern.test(email)) {
+                    error.style.display = "none";
+                    return true;
+                } else {
+                    error.style.display = "block";
+                    return false;
+                }
+            }
+
+            pocEmail.addEventListener('input', validateSaveButton);
+        });
+    </script>
+
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

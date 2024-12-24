@@ -16,6 +16,23 @@
     var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
 }
 
+<style>
+    .button {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-success:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
 <br />
 <h2>Your Projects in <span style="color:#007bff;">@timeframe.Name</span></h2>
 <div>
@@ -26,82 +43,156 @@
 @if(Model.Any())
 {
     <div id="center-everything">
-        <div class="col-md-10">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>
-                            @Html.DisplayNameFor(model => model.Name)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.POCId)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.ManagerId)
-                        </th>
-                        @if(isAdmin.Succeeded)
-                        {
+        <div class="row">
+            <div class="col-md-9">
+                <table class="table">
+                    <thead>
+                        <tr>
                             <th>
-                                @Html.DisplayNameFor(model => model.GDFolderId)
+                                @Html.DisplayNameFor(model => model.Name)
                             </th>
-                        }
-                        
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
-                            <td>
-                                @Html.DisplayFor(modelItem => item.Name)
-                            </td>
-                            <td>
-                                @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
-                                {
-                                    <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
-                                }
-                                else if(item.POCId == null)
-                                {
-                                    <span>Not Assigned</span>
-                                }
-                                else
-                                {
-                                    @item.POC.GetFullName()
-                                }
-                            </td>
-                            <td>
-                                @if(item.ManagerId == null)
-                                {
-                                    <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
-                                }
-                                else
-                                {
-                                    @item.Manager.GetFullName()
-                                }
-                            </td>
+                            <th>
+                                @Html.DisplayNameFor(model => model.POCId)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.ManagerId)
+                            </th>
                             @if(isAdmin.Succeeded)
                             {
-                                <td>
-                                    <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                                </td>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.GDFolderId)
+                                </th>
                             }
                             
-                            <td>
-                                <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
-                            </td>
+                            <th></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Name)
+                                </td>
+                                <td>
+                                    @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
+                                    {
+                                        <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                    }
+                                    else if(item.POCId == null)
+                                    {
+                                        <span>Not Assigned</span>
+                                    }
+                                    else
+                                    {
+                                        @item.POC.GetFullName()
+                                    }
+                                </td>
+                                <td>
+                                    @if(item.ManagerId == null)
+                                    {
+                                        <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                    }
+                                    else
+                                    {
+                                        @item.Manager.GetFullName()
+                                    }
+                                </td>
+                                @if(isAdmin.Succeeded)
+                                {
+                                    <td>
+                                        <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                    </td>
+                                }
+                                
+                                <td>
+                                    @if(isAdmin.Succeeded)
+                                    {
+                                        <a class="select-link-danger" asp-action="ProjectEdit" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Edit</a><span> | </span> 
+                                    }
+                                    <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-3">
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="text-align: center;">
+                        Ready to upload?
+                    </h4>
+                    <hr />
+                    <div style="text-align:center;">
+                        @if(isAdmin.Succeeded)
+                        {
+                            <p style="width: 60%; margin: 0 auto;">
+                                Update a class roster.
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
+                            </p>
+                            <div style="margin: 1rem;">
+                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                            </div>
+                            <br />
+                            <p style="width: 60%; margin: 0 auto;">
+                                Upload survey response data.
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Upload data from Qualtrics/Microsoft Forms/Third-Party Vendor. No project folders, rosters, or team assignments are required to perform this action, as all this is checked automatically."></i>
+                            </p>
+                            <div style="margin: 1rem;">
+                                <a class="btn btn-danger button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
+                            </div>
+                        }
+                        else if(isSponsor.Succeeded)
+                        {
+                            <p style="width: 60%; margin: 0 auto;">
+                                Step 1: Upload your class roster.
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
+                            </p>
+                            <div style="margin: 1rem;">
+                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                            </div>
+                        }
+                        
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 }
 else
 {
-    <p>
-        No project folders have been created yet. 
-    </p>
+    <div class="row">
+        <div class="col-md-9">
+            <p>
+                No project folders have been created yet. 
+            </p>
+        </div>
+        <div class="col-md-3">
+            <div>
+                <h4 style="text-align: center;">
+                    Ready to upload?
+                </h4>
+                <hr />
+                <div style="text-align:center;">
+                    <p style="width: 60%; margin: 0 auto;">
+                        Step 1: Upload your class roster.
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
+                    </p>
+                    <div style="margin: 1rem;">
+                        <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                    </div>
+                    <br />
+                    <p style="width: 60%; margin: 0 auto;">
+                        Step 2: Upload your survey response data.
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="If you start from scratch, you can skip step 1 and move directly to this step."></i>
+                    </p>
+                    <div style="margin: 1rem;">
+                        <a class="btn btn-danger button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @if(!isAdmin.Succeeded)
@@ -118,12 +209,11 @@ else
 <div class="form-group">
         <br>
         <p>
-            Don't see the timeframe you're looking for?
+            Don't see the project you're looking for?
         </p>
         <p>
             <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
-            <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a>
-            <a class="btn btn-success" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster from CSV</a> | 
+            <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a> |
             <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
         </p>
     </div>

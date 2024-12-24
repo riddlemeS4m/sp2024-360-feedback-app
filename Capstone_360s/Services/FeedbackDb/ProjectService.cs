@@ -52,5 +52,27 @@ namespace Capstone_360s.Services.FeedbackDb
                     && !x.Timeframe.IsArchived)
                 .ToListAsync();
         }
+
+        public async Task<Project> GetProjectAndTeamMembersById(string projectId)
+        {
+            _logger.LogInformation("Getting project and team members by project id...");
+            
+            var project = await _dbSet.Include(x => x.POC)
+                .Include(x => x.Manager)
+                .Include(x => x.Timeframe)
+                .Where(x => x.Id == Guid.Parse(projectId))
+                .FirstOrDefaultAsync();
+
+            if (project != null)
+            {
+                project.TeamMembers = await _context.Teams
+                    .Include(x => x.User)
+                    .Where(tm => tm.ProjectId == project.Id)
+                    .ToListAsync();
+            }
+
+            return project;
+            
+        }
     }
 }

@@ -1,13 +1,13 @@
 @{
     ViewData["Title"] = "Generate PDFs";
 
+    var area = (string)ViewContext.RouteData.Values["area"];
     var organizationId = Context.Request.Query["organizationId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var roundId = Context.Request.Query["roundId"].ToString();
 }
 
 <h1 id="loading-header">Please Wait...</h1>
-<hr />
 <div class="row">
     @* <div class="col-md-3">
         <form id="profile-form" method="post" enctype="multipart/form-data">
@@ -31,6 +31,11 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        const antiforgeryToken = '@Html.AntiForgeryToken()';
+        document.body.insertAdjacentHTML('beforeend', antiforgeryToken);
+    </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", async (e) => {
@@ -57,16 +62,35 @@
 
             const organizationId = "@organizationId";
 
-            let url = `/Capstone/Capstone/GeneratePdfs?organizationId=${encodeURIComponent(organizationId)}&timeframeId=${encodeURIComponent(@timeframeId)}&roundId=${encodeURIComponent(@roundId)}`;
+            let url = `/@area/@area/GeneratePdfs?organizationId=${encodeURIComponent(organizationId)}&timeframeId=${encodeURIComponent(@timeframeId)}&roundId=${encodeURIComponent(@roundId)}`;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
             try {
                 let response = await fetch(url, {
-                    method: "POST"
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": token
+                    }
                 });
 
                 if (!response.ok) {
-                    let error = await response.text();
-                    document.getElementById("upload-status").innerText = `Error: ${error}`;
+                    console.log(response);
+
+                    if(response.status === 400)
+                    {
+                        document.getElementById("upload-status").innerText = `Error: Failed to authenticate. Try logging out and logging back in.`;
+                        window.location.href = `/Account/Login?returnUrl=${encodeURIComponent(url)}`;
+                    }
+                    else if(response.status === 500)
+                    {
+                        document.getElementById("upload-status").innerText = `Error: There is a bug in the backend server code. Please contact your system admin.`;
+                    }
+                    else
+                    {
+                        document.getElementById("upload-status").innerText = `Error: There was an unforeseen error. Please try again.`;
+                    }
+
                     clearInterval(timerInterval);
                     e.target.disabled = false;
                     return;

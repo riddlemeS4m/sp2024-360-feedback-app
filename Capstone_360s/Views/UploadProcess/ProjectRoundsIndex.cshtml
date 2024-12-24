@@ -42,7 +42,7 @@
                         @if(isAdmin.Succeeded || isSponsor.Succeeded)
                         {
                             <th>
-                                @nameof(ProjectRound.GDFolderId)
+                                @Html.DisplayNameFor(model => model.ProjectRounds.ElementAt(0).GDFolderId)
                             </th>
                         }                    
                         <th></th>
@@ -65,13 +65,11 @@
                             @if(isAdmin.Succeeded || isSponsor.Succeeded)
                             {
                                 <td>
-                                    <a href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                    <a class="select-link" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                                 </td> 
                             }
-                            <td>
-            @*                     <a asp-action="FeedbackIndex" asp-route-projectId="@item.ProjectId" asp-route-timeframeId="@Model.TimeframeId" asp-route-roundId="@item.RoundId">Select</a>
-            *@                
-                                <a asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
+                            <td>               
+                                <a class="select-link" asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
                             </td>
                         </tr>
                     }

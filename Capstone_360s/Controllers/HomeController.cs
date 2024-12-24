@@ -47,7 +47,10 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid").Value);
+                var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value);
+                var localUserId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value);
+
+                userId = userId == localUserId ? userId : localUserId;
 
                 var organizationsIE = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(userId);
 
@@ -73,7 +76,10 @@ namespace Capstone_360s.Controllers
         [Authorize]
         public async Task<IActionResult> AssignUserToOrganizationConfirm(Guid organizationId)
         {
-            var userId = Guid.Parse(User.Claims.Where(x => x.Type == "uid").FirstOrDefault().Value);
+            var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value);
+            var localUserId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value);
+
+            userId = userId == localUserId ? userId : localUserId;
 
             await _dbServiceFactory.UserOrganizationService.AddAsync(new UserOrganization
             {

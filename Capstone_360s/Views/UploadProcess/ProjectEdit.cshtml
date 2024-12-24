@@ -1,0 +1,336 @@
+@model Capstone_360s.Models.VMs.ProjectEditVM
+
+@{
+    var pattern = @"/^[^@]+@[^@]+ua\.edu$/";
+    var projectName = Model.Project.Name;
+    ViewData["Title"] = $"Edit {projectName}";
+}
+
+<style>
+    .remove-member {
+        background-color: #343a40;  /* Dark Gray (Bootstrap dark) */
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        font-size: 14px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .remove-member:hover {
+        background-color: #212529;  /* Darker shade on hover */
+    }
+
+    #teamMemberList li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 0;
+    }
+
+    #teamMemberList button {
+        margin-left: 10px;
+    }
+</style>
+
+<h2>Edit @Model.Project.Name</h2>
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="ProjectEdit">
+            @Html.AntiForgeryToken()
+            <div class="text-danger"></div>
+            <input type="hidden" asp-for="Project.Id" />
+            <input type="hidden" asp-for="Project.TimeframeId" />
+
+            <h4>Basic Information</h4>
+            <hr />
+            <div class="form-group">
+                <label asp-for="Project.Name" class="control-label"></label>
+                <input asp-for="Project.Name" class="form-control" />
+                <span asp-validation-for="Project.Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Project.Description" class="control-label"></label>
+                <textarea asp-for="Project.Description" class="form-control"></textarea>
+                <span asp-validation-for="Project.Description" class="text-danger"></span>
+            </div>
+            <br />
+            
+            <h4>Technical Configuration</h4>
+            <hr />
+            <div>
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" style="font-size: medium;" title="If you're using a third-party vendor for administering surveys, then changing these parameters affects how the 360 Feedback Portal interprets any survey data that you upload in the future. If you change the parameters here, be sure these changes are reflected in your third-party survey administration tool."> Be careful! Changing these affects your CSV uploads.</i>
+                <br /><br />
+            </div>
+            <div class="form-group">
+                <button type="button" id="unlockConfig" class="btn btn-primary">Unlock Configuration</button>
+                <br /><br />
+            </div>
+            <div class="form-group">
+                <label asp-for="Project.NoOfMembers" class="control-label">How many members does this project have?</label>
+                <input type="number" id="noOfMembers" class="form-control" min="2" asp-for="Project.NoOfMembers" disabled />
+                <span asp-validation-for="Project.NoOfMembers" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Project.NoOfRounds" class="control-label">How many rounds will this project have?</label>
+                <input type="number" id="noOfRounds" class="form-control" min="1" asp-for="Project.NoOfRounds" disabled />
+                <span asp-validation-for="Project.NoOfRounds" class="text-danger"></span>
+            </div>
+            <br />
+
+            <h4>Project Members</h4>
+            <hr />
+            <div class="form-group">
+                <label class="control-label">Current Team members</label>
+                <ul id="teamMemberList">
+                @if(Model.Project.TeamMembers?.Count != 0)
+                {
+                    @foreach(var member in Model.Project.TeamMembers)
+                    {
+                        <li data-member-id="@member.User.Email">
+                            <span>@member.User.FirstName @member.User.LastName</span>
+                            <button type="button" class="btn-close remove-member" aria-label="Remove"></button>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li id="placeholder-item"><i>No team members yet.</i></li>
+                }
+                </ul>
+            </div>
+
+            <!-- Hidden Input to Track Changes -->
+            <input type="hidden" id="teamMembersInput" name="NewTeamMembers" 
+                value="@string.Join(",", Model.Project.TeamMembers.Select(m => m.User.Email))"/>
+
+            @if(Model.PotentialTeamMembers?.Count != 0)
+            {
+                <!-- Dropdown for SelectListItems -->
+                <div class="form-group">
+                    <label for="SelectedTeamMember" class="control-label">Select Team Member</label>
+                    <select id="teamMemberDropdown" name="SelectedTeamMember" class="form-control">
+                        <option value="">-- Select a Team Member --</option>
+                        @foreach (var poc in Model.PotentialTeamMembers)
+                        {
+                            <option value="@poc.Value">@poc.Text</option>
+                        }
+                    </select>
+                </div>
+                <br />
+            }
+            <div class="form-group">
+                <label for="TeamMemberEmail" class="control-label">New Team Member's Email</label>
+                <input id="teamMemberEmail" name="TeamMemberEmail" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span id="emailError" for="TeamMemberEmail" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <button type="button" id="addMemberButton" class="btn btn-primary" disabled>Add</button>
+            </div>
+            <br />
+
+            <h4>Project Manager</h4>
+            <hr />
+            @if(Model.PotentialManagers?.Count != 0)
+            {
+                <!-- Dropdown for SelectListItems -->
+                <div class="form-group">
+                    <label for="SelectedManager" class="control-label">Select Manager</label>
+                    <select id="managerDropdown" name="SelectedManager" class="form-control">
+                        <option value="">-- Select a Manager --</option>
+                        @foreach (var poc in Model.PotentialManagers)
+                        {
+                            <option value="@poc.Value">@poc.Text</option>
+                        }
+                    </select>
+                </div>
+                <br />
+            }
+            <div class="form-group">
+                <label for="ManagerEmail" class="control-label">New Manager's Email</label>
+                <input id="managerEmail" name="ManagerEmail" value="@Model.Project.Manager?.Email" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span id="managerEmailError" for="ManagerEmail" class="text-danger"></span>
+            </div>
+            <br />
+
+            <h4>Sponsor</h4>
+            <hr />
+            @if(Model.PotentialPOCs?.Count != 0)
+            {
+                <!-- Dropdown for SelectListItems -->
+                <div class="form-group">
+                    <label for="SelectedPOC" class="control-label">Select Point of Contact</label>
+                    <select id="pocDropdown" name="SelectedPOC" class="form-control">
+                        <option value="">-- Select a POC --</option>
+                        @foreach (var poc in Model.PotentialPOCs)
+                        {
+                            <option value="@poc.Value">@poc.Text</option>
+                        }
+                    </select>
+                </div>
+                <br />
+            }
+            <div class="form-group">
+                <label for="POCEmail" class="control-label">New Sponsor's Email</label>
+                <input id="pocEmail" name="POCEmail" value="@Model.Project.POC?.Email" class="form-control" placeholder="Individual's UA-issued email"/>
+                <span id="pocEmailError" for="POCEmail" class="text-danger"></span>
+            </div>
+            <br />
+
+            <div class="form-group">
+                <input id="save-button" type="submit" value="Save" class="btn btn-primary" /> | 
+                <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-timeframeId="@Model.Project.TimeframeId" asp-route-organizationId="@Model.Project.OrganizationId">Back</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+        document.getElementById('unlockConfig').addEventListener('click', function () {
+            const noOfMembers = document.getElementById('noOfMembers');
+            const noOfRounds = document.getElementById('noOfRounds');
+            
+            // Toggle the disabled attribute
+            noOfMembers.disabled = !noOfMembers.disabled;
+            noOfRounds.disabled = !noOfRounds.disabled;
+
+            // Update button text
+            this.textContent = noOfMembers.disabled ? 'Unlock Configuration' : 'Lock Configuration';
+        });
+    </script>
+
+    <!-- JavaScript to Handle Event Listeners -->
+    <script>
+        // Helper function to populate input field
+        function populateInput(dropdownId, inputId) {
+            const dropdown = document.getElementById(dropdownId);
+            const input = document.getElementById(inputId);
+
+            if(dropdown !== null && input !== null)
+            {
+                dropdown.addEventListener('change', function() {
+                    input.value = this.value;  // Set input value to selected option value
+                });
+            }
+        }
+
+        // Attach event listeners for each dropdown
+        populateInput('teamMemberDropdown', 'teamMemberEmail');
+        populateInput('managerDropdown', 'managerEmail');
+        populateInput('pocDropdown', 'pocEmail');
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const teamMemberList = document.getElementById('teamMemberList');
+            const teamMembersInput = document.getElementById('teamMembersInput');
+            const addMemberButton = document.getElementById('addMemberButton');
+            const teamMemberDropdown = document.getElementById('teamMemberDropdown');
+            const teamMemberEmail = document.getElementById('teamMemberEmail');
+            const pocEmail = document.getElementById('pocEmail');
+            const managerEmail = document.getElementById('managerEmail');
+            const emailError = document.getElementById('emailError');
+            const pocEmailError = document.getElementById('pocEmailError');
+            const managerEmailError = document.getElementById('managerEmailError');
+            const saveButton = document.getElementById('save-button');
+            const placeholderItem = document.getElementById('placeholder-item');
+
+            // Disable Add Button Until Valid Inputs
+            function validateAddButton() {
+                @* const isDropdownSelected = teamMemberDropdown.value !== ""; *@
+                @* const isEmailEntered = teamMemberEmail.value.trim() !== ""; *@
+                const isEmailValid = validateEmail(teamMemberEmail.value, emailError);
+                addMemberButton.disabled = !(isEmailValid);
+                saveButton.disabled = !(isEmailValid || teamMemberEmail.value === "");
+            }
+
+            function validateSaveButton() {
+                const isPocEmailValid = validateEmail(pocEmail.value, pocEmailError);
+                const isManagerEmailValid = validateEmail(managerEmail.value, managerEmailError);
+                saveButton.disabled = !((isPocEmailValid || pocEmail.value === "") && (isManagerEmailValid || managerEmail.value === ""));
+            }
+
+            // Email Validation Logic
+            function validateEmail(email, error) {
+                const pattern = @Html.Raw(@pattern);
+                if (pattern.test(email)) {
+                    error.style.display = "none";
+                    return true;
+                } else {
+                    error.style.display = "block";
+                    return false;
+                }
+            }
+
+            // Attach Listeners to Enable/Disable Button
+            teamMemberDropdown.addEventListener('change', validateAddButton);
+            teamMemberEmail.addEventListener('input', validateAddButton);
+
+            pocEmail.addEventListener('input', validateSaveButton);
+            managerEmail.addEventListener('input', validateSaveButton);
+
+            // Remove Team Member (X Button)
+            teamMemberList.addEventListener('click', function (e) {
+                if (e.target.classList.contains('remove-member')) {
+                    const listItem = e.target.parentElement;
+                    const memberId = listItem.dataset.memberId;
+                    listItem.remove();
+                    updateHiddenField(memberId, false);  // Remove from hidden input
+                }
+            });
+
+            // Add Team Member
+            addMemberButton.addEventListener('click', function () {
+                const selectedOption = teamMemberDropdown.options[teamMemberDropdown.selectedIndex];
+                const email = teamMemberEmail.value;
+
+                if(placeholderItem !== null)
+                {
+                    placeholderItem.remove();
+                }
+
+                if (selectedOption.value && email) {
+                    // Add to the list
+                    const newListItem = document.createElement('li');
+                    newListItem.innerHTML = `<span>${selectedOption.text} (${email})</span> 
+                        <button type="button" class="btn-close remove-member" aria-label="Remove"></button>`;
+                    newListItem.setAttribute('data-member-id', selectedOption.value);
+                    teamMemberList.appendChild(newListItem);
+
+                    // Update hidden input field
+                    updateHiddenField(selectedOption.value, true);
+
+                    // Clear selections
+                    teamMemberDropdown.selectedIndex = 0;
+                    teamMemberEmail.value = '';
+                    validateAddButton();
+                }
+            });
+
+            // Update Hidden Field (Tracking Changes)
+            function updateHiddenField(memberId, isAdd) {
+                const currentMembers = teamMembersInput.value ? teamMembersInput.value.split(',') : [];
+
+                if (isAdd) {
+                    if (!currentMembers.includes(memberId)) {
+                        currentMembers.push(memberId);
+                    }
+                } else {
+                    const index = currentMembers.indexOf(memberId);
+                    if (index > -1) {
+                        currentMembers.splice(index, 1);
+                    }
+                }
+                teamMembersInput.value = currentMembers.join(',');
+            }
+        });
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }    
+}

@@ -3,6 +3,7 @@ using Capstone_360s.Services.Organizations;
 using Capstone_360s.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Capstone_360s.Interfaces.IService;
 
 namespace Capstone_360s.Areas.Capstone.Controllers
 {
@@ -51,7 +52,13 @@ namespace Capstone_360s.Areas.Capstone.Controllers
                 throw new ArgumentNullException("One of the parameters was empty.");
             }
 
-            await _capstoneService.CreatePdfs(Guid.Parse(organizationId), timeframeId, roundId);
+            try {
+                await _capstoneService.CreatePdfs(Guid.Parse(organizationId), timeframeId, roundId);
+            } 
+            catch (Exception ex) {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+
 
             _logger.LogInformation("Done! Navigating to the projects index...");
 

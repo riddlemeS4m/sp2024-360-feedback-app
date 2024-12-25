@@ -19,11 +19,16 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.2/css/jquery.dataTables.min.css" integrity="sha384-nlqJt7hgTYzEtpwtccFUVNZPXLN4pJoZ/QIfCtAIK9txm0dVyw/lz/47SslwYLPj" crossorigin="anonymous">
 
     <style>
-        tr:hover {
-            cursor: pointer;
-            background-color: #f0f0f0; /* Optional: highlight row on hover */
+        .button {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-    </style>
+
+        .btn-primary:hover {
+            background-color: #004494;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+</style>
 </head>
 <body>
     <header>
@@ -37,8 +42,14 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link fs-4 badge badge-info" style="color:white;" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link fs-4 badge badge-info custom-nav-margin" style="color:white;" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
+                        @if(User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link fs-4 badge badge-info custom-nav-margin" style="color:white;" asp-area="" asp-controller="Home" asp-action="LandingPage">Classes</a>
+                            </li>
+                        }                        
                         <li class="nav-item">
                             <a class="nav-link fs-4 badge badge-info" style="color:white;" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
@@ -58,7 +69,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2024 &#9;| &#9; The University of Alabama MIS Program &#9; | &#9; 360 Feedback Portal &#9; | &#9; <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2024 &#9;| &#9; The University of Alabama MIS Program &#9; | &#9; 360 Feedback Portal &#9; | &#9; <a class="select-link-primary" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
 
@@ -78,6 +89,27 @@
             $('.table').DataTable();
         });
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const rows = document.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                row.addEventListener('mouseenter', function () {
+                    this.querySelectorAll('td').forEach(td => {
+                        td.style.setProperty('background-color', '#f5f5f5', 'important');
+                    });
+                });
+
+                row.addEventListener('mouseleave', function () {
+                    this.querySelectorAll('td').forEach(td => {
+                        td.style.removeProperty('background-color');
+                    });
+                });
+            });
+        });
+    </script>
+
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -31,7 +31,7 @@ namespace Capstone_360s.Controllers
             {
                 return BadRequest();
             }
-            
+
             return View();
         }
     }

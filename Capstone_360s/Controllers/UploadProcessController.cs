@@ -94,7 +94,7 @@ namespace Capstone_360s.Controllers
 
         [HttpPost]
         [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
-        public async Task<IActionResult> TimeframeCreate([Bind(nameof(Timeframe.Id),nameof(Timeframe.OrganizationId),nameof(Timeframe.Name),nameof(Timeframe.NoOfProjects),nameof(Timeframe.NoOfRounds))] Timeframe timeframe, 
+        public async Task<IActionResult> TimeframeCreate([Bind(nameof(Timeframe.Id),nameof(Timeframe.OrganizationId),nameof(Timeframe.Name),nameof(Timeframe.NoOfProjects),nameof(Timeframe.NoOfRounds),nameof(Timeframe.StartDate), nameof(Timeframe.EndDate))] Timeframe timeframe, 
             IEnumerable<string> ProjectNames)
         {
             _logger.LogInformation("Creating a new timeframe...");
@@ -128,6 +128,55 @@ namespace Capstone_360s.Controllers
 
             _logger.LogInformation("Returning next view, projects selection view...");
             return RedirectToAction(nameof(ProjectsIndex), new { organizationId = timeframe.OrganizationId, timeframeId = timeframe.Id});
+        }
+
+        [HttpGet]
+        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        public async Task<IActionResult> TimeframeEdit(int timeframeId)
+        {
+            _logger.LogInformation("Editing a timeframe...");
+
+            var timeframe = await _dbServiceFactory.TimeframeService.GetByIdAsync(timeframeId);
+
+            if (timeframe == null)
+            {
+                _logger.LogWarning("Couldn't find timeframe...");
+                return NotFound();
+            }
+
+            return View(timeframe);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        public async Task<IActionResult> TimeframeEdit([Bind(nameof(Timeframe.Id),nameof(Timeframe.OrganizationId),nameof(Timeframe.Name),nameof(Timeframe.NoOfRounds),nameof(Timeframe.StartDate), nameof(Timeframe.EndDate))] Timeframe timeframe)
+        {
+            if(string.IsNullOrEmpty(timeframe.Name))
+            {
+                ModelState.AddModelError(nameof(Timeframe.Name), "Name is required");
+                return View(timeframe);
+            }
+
+            var oldTimeframe = await _dbServiceFactory.TimeframeService.GetByIdAsync(timeframe.Id);
+
+            oldTimeframe.Name = timeframe.Name;
+            oldTimeframe.StartDate = timeframe.StartDate;
+            oldTimeframe.EndDate = timeframe.EndDate;
+
+            if(oldTimeframe.NoOfRounds > timeframe.NoOfRounds)
+            {
+                ModelState.AddModelError(nameof(Timeframe.NoOfRounds), "Number of rounds must be greater than or equal to the number of rounds that the round was created with.");
+                return View(timeframe);
+            }
+            else
+            {
+                oldTimeframe.NoOfRounds = timeframe.NoOfRounds;
+            }
+
+            await _dbServiceFactory.TimeframeService.UpdateAsync(oldTimeframe);
+
+            return RedirectToAction(nameof(UploadProcessController.TimeframesIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId});
         }
 
         public async Task<IActionResult> ProjectsIndex(int timeframeId)
@@ -738,6 +787,13 @@ namespace Capstone_360s.Controllers
             await _dbServiceFactory.ProjectService.UpdateAsync(project);
 
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), new { timeframeId = project.TimeframeId, organizationId = OrganizationId });
+        }
+
+        [HttpGet]
+        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        public IActionResult UploadBlackboardRoster(int timeframeId)
+        {
+            return View();
         }
     }
 }

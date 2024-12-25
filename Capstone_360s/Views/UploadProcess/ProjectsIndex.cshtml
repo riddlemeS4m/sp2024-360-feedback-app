@@ -12,6 +12,7 @@
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
+    
     var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
     var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
 }
@@ -34,11 +35,11 @@
 </style>
 
 <br />
-<h2>Your Projects in <span style="color:#007bff;">@timeframe.Name</span></h2>
-<div>
+<h2>Your Projects in <a class="select-link-primary" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">@timeframe.Name</a></h2>
+@* <div>
     <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Select the project that you participated in or submitted feedback for."> Select a project.</i>
     <br /><br />
-</div>
+</div> *@
 
 @if(Model.Any())
 {
@@ -72,12 +73,12 @@
                         {
                             <tr onclick="navigateToSelect('@Url.Action("ProjectRoundsIndex", new { organizationId, timeframeId, projectId = item.Id })')">
                                 <td>
-                                    @Html.DisplayFor(modelItem => item.Name)
+                                    <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
                                 </td>
                                 <td>
                                     @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
                                     {
-                                        <a class="select-link"a asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                        <a class="select-link-primary" asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
                                     }
                                     else if(item.POCId == null)
                                     {
@@ -85,33 +86,33 @@
                                     }
                                     else
                                     {
-                                        @item.POC.GetFullName()
+                                        @item.POC?.GetFullName()
                                     }
                                 </td>
                                 <td>
-                                    @if(item.ManagerId == null)
+                                    @if(item.ManagerId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
                                     {
-                                        <a class="select-link" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                        <a class="select-link-primary" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
+                                    }
+                                    else if(item.POCId == null)
+                                    {
+                                        <span>Not Assigned</span>
                                     }
                                     else
                                     {
-                                        @item.Manager.GetFullName()
+                                        @item.Manager?.GetFullName()
                                     }
                                 </td>
                                 @if(isAdmin.Succeeded)
                                 {
                                     <td>
-                                        <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                        <a class="select-link-primary" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                    </td>
+                                    <td>
+                                        <a class="select-link-primary" asp-action="ProjectEdit" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Edit</a> |  
+                                        <a class="select-link-danger disabled" asp-action="ProjectDelete" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Delete</a>
                                     </td>
                                 }
-                                
-                                <td>
-                                    @if(isAdmin.Succeeded)
-                                    {
-                                        <a class="select-link-danger" asp-action="ProjectEdit" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Edit</a><span> | </span> 
-                                    }
-                                    <a class="select-link" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">Select</a>
-                                </td>
                             </tr>
                         }
                     </tbody>
@@ -131,7 +132,7 @@
                                 <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
                             </p>
                             <div style="margin: 1rem;">
-                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
                             </div>
                             <br />
                             <p style="width: 60%; margin: 0 auto;">
@@ -139,7 +140,7 @@
                                 <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Upload data from Qualtrics/Microsoft Forms/Third-Party Vendor. No project folders, rosters, or team assignments are required to perform this action, as all this is checked automatically."></i>
                             </p>
                             <div style="margin: 1rem;">
-                                <a class="btn btn-danger button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
+                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
                             </div>
                         }
                         else if(isSponsor.Succeeded)
@@ -187,7 +188,7 @@ else
                         <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="If you start from scratch, you can skip step 1 and move directly to this step."></i>
                     </p>
                     <div style="margin: 1rem;">
-                        <a class="btn btn-danger button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
+                        <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
                     </div>
                 </div>
             </div>
@@ -200,7 +201,7 @@ else
     <div>
         <br>
         <div class="form-group">
-            <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+            <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
        </div>
     </div>
 }
@@ -214,7 +215,7 @@ else
         <p>
             <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
             <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a> |
-            <a class="btn btn-warning" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+            <a class="select-link-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
         </p>
     </div>
 }

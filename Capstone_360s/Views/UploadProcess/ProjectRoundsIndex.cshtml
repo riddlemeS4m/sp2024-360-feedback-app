@@ -17,11 +17,11 @@
 }
 
 <br>
-<h2>@project.Name Rounds</h2>
-<div>
+<h2><a class="select-link-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">@project.Name</a> Rounds</h2>
+@* <div>
     <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Select the round that you would like to view."> Select a round.</i>
     <br /><br />
-</div>
+</div> *@
 
 @if(Model.ProjectRounds.Any())
 {
@@ -44,8 +44,9 @@
                             <th>
                                 @Html.DisplayNameFor(model => model.ProjectRounds.ElementAt(0).GDFolderId)
                             </th>
+                            <th></th>
                         }                    
-                        <th></th>
+                        
                     </tr>
                 </thead>
                 <tbody>
@@ -54,7 +55,7 @@
                         <tr onclick="navigateToSelect('@Url.Action("FeedbackPdfsIndex", new { organizationId = Model.OrganizationId, projectId = item.ProjectId, timeframeId = Model.TimeframeId, roundId = item.RoundId })')">
 
                             <td>
-                                @Html.DisplayFor(modelItem => item.Round.Name)
+                                <a class="select-link-primary" asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">@Html.DisplayFor(modelItem => item.Round.Name)</a>
                             </td>
                             <td>
                                 @Html.DisplayFor(modelItem => item.ReleaseDate)
@@ -65,12 +66,13 @@
                             @if(isAdmin.Succeeded || isSponsor.Succeeded)
                             {
                                 <td>
-                                    <a class="select-link" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                    <a class="select-link-primary" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                                 </td> 
+                                <td>               
+                                    <a class="select-link-primary disabled" asp-action="ProjectRoundEdit" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Edit</a> | 
+                                    <a class="select-link-danger disabled" asp-action="ProjectRoundDelete" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Delete</a>
+                                </td>                
                             }
-                            <td>               
-                                <a class="select-link" asp-action="FeedbackPdfsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@item.ProjectId" asp-route-roundId="@item.RoundId">Select</a>
-                            </td>
                         </tr>
                     }
                 </tbody>
@@ -90,7 +92,7 @@ else
     <div>
         <br>
         <div class="form-group">
-            <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
+            <a class="btn btn-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
         </div>
     </div>
 }
@@ -102,8 +104,8 @@ else
             Don't see the round you're looking for?
         </p>
         <p>
-            <a class="btn btn-primary disabled" asp-action="RoundCreate" asp-route-projectId="@projectId">Create New Project Round</a> | 
-            <a class="btn btn-warning" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
+            <a class="btn btn-primary disabled" asp-action="RoundCreate" asp-route-projectId="@projectId">Create a New Project Round</a> | 
+            <a class="select-link-primary" asp-action="ProjectsIndex" asp-route-organizationId="@Model.OrganizationId" asp-route-timeframeId="@Model.TimeframeId" asp-route-projectId="@projectId">Back</a>
         </p>
     </div>
 }

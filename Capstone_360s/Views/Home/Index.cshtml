@@ -6,7 +6,8 @@
     <div class="text-center hero-content">
         @if (User.Identity?.IsAuthenticated ?? false)
         {
-            <h1 class="display-3">Welcome, @User.Claims.Where(x => x.Type == "name").FirstOrDefault().Value!</h1>
+            <h1 class="display-3">Hi, <span style="font-weight: 900;">@User.Claims.Where(x => x.Type == "name").FirstOrDefault().Value.Split(" ")[0]</span>!</h1>
+            <p class="lead">Welcome to your 360 Feedback Portal. <br /> Ready to get started?</p>
             <div class="mt-4">
                 <a class="btn btn-primary btn-lg me-3" asp-controller="Home" asp-action="LandingPage">Get Started</a>
                 @* <a class="btn btn-danger btn-lg" asp-controller="Account" asp-action="Logout">Logout</a> *@

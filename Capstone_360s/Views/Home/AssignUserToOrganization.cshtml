@@ -1,47 +1,43 @@
 ﻿@model IEnumerable<Capstone_360s.Models.FeedbackDb.Organization>
 
 @{
-    ViewData["Title"] = "Choose an Organization";
+    ViewData["Title"] = "Choose a Class";
 }
 
-<h1>Choose an Organization</h1>
+<h2>Choose a Class</h2>
 
 @if (Model.Any())
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>
-                    @Html.DisplayNameFor(model => model.Name)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.Type)
-                </th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr onclick="navigateToSelect('@Url.Action("AssignUserToOrganizationConfirm", new { organizationId = item.Id })')">
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Name)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Type)
-                    </td>
-                    <td>
-                        <a asp-action="AssignUserToOrganizationConfirm" asp-route-organizationId="@item.Id">Select</a>
-                    </td>
+    <div class='col-md-8'>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Name)
+                    </th>
+                    <th></th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr onclick="navigateToSelect('@Url.Action("AssignUserToOrganizationConfirm", new { organizationId = item.Id })')">
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Name)
+                        </td>
+                        <td>
+                            <a class="select-link" asp-action="AssignUserToOrganizationConfirm" asp-route-organizationId="@item.Id">Select</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 else
 {
     <div>
-        <p>There are no organizations to select.</p>
+        <p>There are no classes to select.</p>
     </div>
 }
 

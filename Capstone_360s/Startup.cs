@@ -1,31 +1,30 @@
 ﻿
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using Capstone_360s.Models;
 using Capstone_360s.Services.Configuration;
-using Capstone_360s.Utilities;
+using Capstone_360s.Interfaces.IService;
 
 namespace Capstone_360s
 {
-    public class Startup(IConfiguration configuration)
+    public class Startup()
     {
-        private readonly IConfiguration _configuration = configuration;
-
         public void ConfigureServices(IServiceCollection services)
         {
-            // Get environment variables.
-            var environment = Environment.GetEnvironmentVariable(CustomConfiguration.Environment);
-
-            // Register the CustomConfigurationService with validation
-            var customConfiguration = new CustomConfigurationService(_configuration, environment);
-            services.AddSingleton(customConfiguration);
+            // Add custom configuration
+            services.AddSingleton<IConfigureEnvironment>(sp => {
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var environment = Environment.GetEnvironmentVariable(CustomConfiguration.Environment);
+                return new CustomConfigurationService(configuration, environment);
+            });
 
             // Add logging services
             services.AddLogging();
 
             // Add all custom services
-            services.AddCustomServices(customConfiguration);
+            services.AddCustomServices();
 
             // Configure network settings
             services.Configure<ForwardedHeadersOptions>(options =>
@@ -108,6 +107,14 @@ namespace Capstone_360s
 
             //     await next();
             // });
+
+            app.Use(async (context, next) =>
+            {
+                var transformer = context.RequestServices.GetRequiredService<IClaimsTransformation>();
+                context.User = await transformer.TransformAsync(context.User);
+                await next();
+            });
+
         }
     }
 }

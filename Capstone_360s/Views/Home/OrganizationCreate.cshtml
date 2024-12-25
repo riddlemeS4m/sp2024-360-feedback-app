@@ -1,19 +1,33 @@
 ﻿@model Capstone_360s.Models.FeedbackDb.Organization
 
 @{
-    ViewData["Title"] = "Create Organization";
+    ViewData["Title"] = "Create a Class";
 }
 
-<h4>Create Organization</h4>
-<hr />
+<style>
+    textarea {
+        height: 150px;
+    }
+</style>
+
+<h2>Create a Class</h2>
 <div class="row">
     <div class="col-md-4">
         <form asp-action="OrganizationCreate">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <h4>Basic Information</h4>
+            <hr />
             <div class="form-group">
                 <label asp-for="Name" class="control-label"></label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <br />
+            <h4>Technical Configuration</h4>
+            <hr />
+            <div>
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" style="font-size: medium;" title="This value allows your organization to use pre-configured organization features for roster uploads, survey planning, etc. They must be input precisely."> Get these values from your system admin.</i>
+                <br /><br />
             </div>
             <div class="form-group">
                 <label asp-for="Type" class="control-label"></label>
@@ -21,38 +35,50 @@
                 <span asp-validation-for="Type" class="text-danger"></span>
             </div>
             <br />
+            <h4>Metrics</h4>
+            <hr />
+            <div>
+                <!-- Specify organization survey metrics -->
+                <div id="survey-metrics-container">
+                    <p id="metrics-placeholder" style="color: gray;">
+                        <i>No metrics yet. Create one!</i>
+                    </p>
+                </div>
+                <div class="form-group">
+                    <!--add question button-->
+                    <button type="button" class="btn btn-primary" id="add-metric" style="width: 8rem;">Add Metric</button>
+                </div>
+                <br />
+            </div>
+
+            <h4>Questions</h4>
+            <hr />
+            <div>
+                <!-- Specify organization survey questions-->
+                <div id="survey-questions-container">
+                    <p id="questions-placeholder" style=color:gray;>
+                        <i>No questions yet. Create one!</i>
+                    </p>
+                </div>
+                <div class="form-group">
+                    <!--add question button-->
+                    <button type="button" class="btn btn-primary" id="add-question" style="width: 8rem;">Add Question</button>
+
+                </div>
+                <br />
+            </div>
+            <hr />
             <div class="form-group">
-                <!--add question button-->
-                <button type="button" class="btn btn-primary" id="add-metric">Add Metric</button>
+                <p>
+                    Ready to create your class?
+                </p>
             </div>
-
-
-            <!-- Specify organization survey metrics -->
-            <div id="survey-metrics-container">
-
-            </div>
-            <br />
-
             <div class="form-group">
-                <!--add question button-->
-                <button type="button" class="btn btn-primary" id="add-question">Add Question</button>
-
-            </div>
-
-            <!-- Specify organization survey questions-->
-            <div id="survey-questions-container">
-
-            </div>
-            <br />
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+                <input class="btn btn-primary btn-lg" type="submit" value="Create" /> | 
+                <a class="select-link-primary" asp-action="LandingPage">Back</a>
             </div>
         </form>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back</a>
 </div>
 
 @section Scripts {
@@ -62,67 +88,100 @@
             const container = document.getElementById('survey-metrics-container');
             const i = container.querySelectorAll('.form-group').length;
 
+            const placeholder = document.getElementById('metrics-placeholder');
+            if(placeholder !== null)
+            {
+                placeholder.remove();
+            }
+
             const br = document.createElement('br');
             container.appendChild(br);
 
             // const heading = document.createElement('p')
             // heading.textContent = 'Metric';
 
-            //create inputs for metric name, description, min, and max
-            const divMetricName = document.createElement('div');
+            const divMetricName = document.createElement('card');
             divMetricName.classList.add('form-group');
 
+            const metricCard = document.createElement('div')
+            metricCard.classList.add('card', 'border-light', 'mb-3', 'shadow-sm');
+
+            const metricHeader = document.createElement('h5')
+            metricHeader.classList.add('card-header');
+            metricHeader.textContent = `Metric ${i + 1}`;
+
+            metricCard.appendChild(metricHeader); 
+
+            const metricCardText = document.createElement('div');
+            metricCardText.classList.add('card-body');
+
             const labelName = document.createElement('label');
-            labelName.textContent = `Name`;
+            labelName.textContent = `Metric Name`;
             labelName.setAttribute('for', `Names_${i}`);
-            divMetricName.appendChild(labelName);
+            metricCardText.appendChild(labelName);
 
             const inputName = document.createElement('input');
             inputName.type = 'text';
             inputName.maxLength = 100;
             inputName.name = `Names[${i}]`;
+            inputName.placeholder = `What is this metric called?`
             inputName.id = `Names_${i}`;
             inputName.classList.add('form-control');
-            divMetricName.appendChild(inputName);
+            metricCardText.appendChild(inputName);
+
+            metricCardText.appendChild(document.createElement('br'));
 
             const labelDescription = document.createElement('label');
             labelDescription.textContent = `Description`;
             labelDescription.setAttribute('for', `Descriptions_${i}`);
-            divMetricName.appendChild(labelDescription);
+            metricCardText.appendChild(labelDescription);
 
-            const inputDescription = document.createElement('input');
+            const inputDescription = document.createElement('textarea');
             inputDescription.type = 'text';
             inputDescription.maxLength = 255;
             inputDescription.name = `Descriptions[${i}]`;
+            inputDescription.placeholder = `This is an optional prompt that students will see when they complete their surveys within the Feedback Portal.`
             inputDescription.id = `Descriptions_${i}`;
             inputDescription.classList.add('form-control');
-            divMetricName.appendChild(inputDescription);
+            metricCardText.appendChild(inputDescription);
+
+            metricCardText.appendChild(document.createElement('br'));
 
             const labelMin = document.createElement('label');
-            labelMin.textContent = `Minimum`;
+            labelMin.textContent = `Minimum Value`;
             labelMin.setAttribute('for', `Mins_${i}`);
-            divMetricName.appendChild(labelMin);
+            metricCardText.appendChild(labelMin);
 
             const inputMin = document.createElement('input');
             inputMin.type = 'number';
             inputMin.min = 0;
+            inputMin.value = 0;
             inputMin.name = `Mins[${i}]`;
             inputMin.id = `Mins_${i}`;
             inputMin.classList.add('form-control');
-            divMetricName.appendChild(inputMin);
+            metricCardText.appendChild(inputMin);
+
+            metricCardText.appendChild(document.createElement('br'));
 
             const labelMax = document.createElement('label');
-            labelMax.textContent = `Maximum`;
+            labelMax.textContent = `Maximum Value`;
             labelMax.setAttribute('for', `Maxs_${i}`);
-            divMetricName.appendChild(labelMax);
+            metricCardText.appendChild(labelMax);
 
             const inputMax = document.createElement('input');
             inputMax.type = 'number';
             inputMax.min = 0;
+            inputMax.value = 0;
             inputMax.name = `Maxs[${i}]`;
             inputMax.id = `Maxs_${i}`;
             inputMax.classList.add('form-control');
-            divMetricName.appendChild(inputMax);
+            metricCardText.appendChild(inputMax);
+
+            metricCard.appendChild(metricCardText);
+
+            divMetricName.appendChild(metricCard);
+
+            divMetricName.appendChild(document.createElement('br'));
 
             container.appendChild(divMetricName);
         });
@@ -133,6 +192,12 @@
             const container = document.getElementById('survey-questions-container');
             const i = container.querySelectorAll('.form-group').length;
 
+            const placeholder = document.getElementById('questions-placeholder');
+            if(placeholder !== null)
+            {
+                placeholder.remove();
+            }
+
             const br = document.createElement('br');
             container.appendChild(br);
 
@@ -140,34 +205,56 @@
             // heading.textContent = 'Question';
 
             //create inputs for question name, description, and type
-            const divQuestionName = document.createElement('div');
+            const divQuestionName = document.createElement('card');
             divQuestionName.classList.add('form-group');
+
+            const questionCard = document.createElement('div')
+            questionCard.classList.add('card', 'border-light', 'mb-3', 'shadow-sm');
+
+            const questionHeader = document.createElement('h5')
+            questionHeader.classList.add('card-header');
+            questionHeader.textContent = `Question ${i + 1}`;
+
+            questionCard.appendChild(questionHeader); 
+
+            const questionCardText = document.createElement('div');
+            questionCardText.classList.add('card-body');
 
             const labelName = document.createElement('label');
             labelName.textContent = `Question`;
             labelName.setAttribute('for', `Qs_${i}`);
-            divQuestionName.appendChild(labelName);
+            questionCardText.appendChild(labelName);
 
-            const inputName = document.createElement('input');
+            const inputName = document.createElement('textarea');
             inputName.type = 'text';
             inputName.maxLength = 255;
             inputName.name = `Qs[${i}]`;
+            inputName.placeholder = `What question do the students need to answer?`;
             inputName.id = `Qs_${i}`;
             inputName.classList.add('form-control');
-            divQuestionName.appendChild(inputName);
+            questionCardText.appendChild(inputName);
+
+            questionCardText.appendChild(document.createElement('br'));
 
             const labelDescription = document.createElement('label');
             labelDescription.textContent = `Example`;
             labelDescription.setAttribute('for', `Examples_${i}`);
-            divQuestionName.appendChild(labelDescription);
+            questionCardText.appendChild(labelDescription);
 
-            const inputDescription = document.createElement('input');
+            const inputDescription = document.createElement('textarea');
             inputDescription.type = 'text';
             inputDescription.maxLength = 255;
             inputDescription.name = `Examples[${i}]`;
+            inputDescription.placeholder = `This is an optional prompt that students will see when they complete their surveys within the Feedback Portal.`
             inputDescription.id = `Examples_${i}`;
             inputDescription.classList.add('form-control');
-            divQuestionName.appendChild(inputDescription);
+            questionCardText.appendChild(inputDescription);
+
+            questionCard.appendChild(questionCardText);
+
+            divQuestionName.appendChild(questionCard);
+
+            divQuestionName.appendChild(document.createElement('br'));
 
             container.appendChild(divQuestionName);
         });

@@ -11,93 +11,101 @@
 
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var organization = await feedbackDbServiceFactory.OrganizationService.GetByIdAsync(Guid.Parse(organizationId));
-    var isAuthorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var isAuthorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 }
 
 <br />
-<h2>Welcome to @organization.Name!</h2>
-<div>
+<h2>Welcome to <a class="select-link-primary" asp-controller="Home" asp-action="LandingPage">@organization.Name!</a></h2>
+@* <div>
     <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Select the time period that you participated in this project or submitted feedback for."> Select a timeframe.</i>
     <br /><br />
-</div>
+</div> *@
 
-<div id="center-everything">
-    <div class="col-md-10">
-        <table class="table">
-            <thead>
-                <tr>
-                    @if(isAuthorized.Succeeded)
-                    {
-                        <th>
-                            @Html.DisplayNameFor(model => model.Id)
-                        </th>
-                    }
-                    
-                    <th>
-                        @Html.DisplayNameFor(model => model.Name)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.StartDate)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.EndDate)
-                    </th>
-                    @if(isAuthorized.Succeeded)
-                    {
-                        <th>
-                            @Html.DisplayNameFor(model => model.GDFolderId)
-                        </th>
-                    }
-                    
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    @if(!item.IsArchived)
-                    {
-                        <tr onclick="navigateToSelect('@Url.Action("ProjectsIndex", new { organizationId = organizationId, timeframeId = item.Id })')">
+@if(Model.Any())
+{
+    <div id="center-everything">
+        <div class="row">
+            <div class="col-md-9">
+                <table class="table">
+                    <thead>
+                        <tr>
                             @if(isAuthorized.Succeeded)
                             {
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Id)
-                                </td>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.Id)
+                                </th>
                             }
                             
-                            <td>
-                                @Html.DisplayFor(modelItem => item.Name)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.StartDate)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.EndDate)
-                            </td>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Name)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.StartDate)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.EndDate)
+                            </th>
                             @if(isAuthorized.Succeeded)
                             {
-                                <td>
-                                    <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                                </td>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.GDFolderId)
+                                </th>
+                                <th></th>
                             }
-                            
-                            <td>
-                                <a class="select-link" asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">Select</a>
-                            </td>
                         </tr>
-                    } 
-                }
-            </tbody>
-        </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            @if(!item.IsArchived)
+                            {
+                                <tr onclick="navigateToSelect('@Url.Action("ProjectsIndex", new { organizationId = organizationId, timeframeId = item.Id })')">
+                                    @if(isAuthorized.Succeeded)
+                                    {
+                                        <td>
+                                            @Html.DisplayFor(modelItem => item.Id)
+                                        </td>
+                                    }
+                                    <td>
+                                        <a class="select-link-primary" asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                                    </td>
+                                    <td>
+                                        @Html.DisplayFor(modelItem => item.StartDate)
+                                    </td>
+                                    <td>
+                                        @Html.DisplayFor(modelItem => item.EndDate)
+                                    </td>
+                                    @if(isAuthorized.Succeeded)
+                                    {
+                                        <td>
+                                            <a class="select-link-primary" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                        </td>
+                                        <td>
+                                            <a class="select-link-primary" asp-action="TimeframeEdit" asp-route-organizationId="@organizationId" asp-route-timeframeId="@item.Id">Edit</a>
+                                        </td>
+                                    }
+                                </tr>
+                            } 
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
+}
+else
+{
+    <p>
+        No timeframes found for this organization.
+    </p>
+}
 
 @if(!isAuthorized.Succeeded)
 {
     <div>
         <br>
         <div class="form-group">
-            <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
+            <a class="btn btn-primary" asp-controller="Home" asp-action="LandingPage">Back</a>
         </div>
     </div>
 }
@@ -106,11 +114,11 @@ else
 <div class="form-group">
         <br>
         <p>
-            Don't see the organization you're looking for?
+            Don't see the semester you're looking for?
         </p>
         <p>
-            <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create New Timeframe</a> | 
-            <a class="btn btn-warning" asp-controller="Home" asp-action="LandingPage">Back</a>
+            <a class="btn btn-primary" asp-action="TimeframeCreate" asp-route-organizationId="@organizationId">Create a New Semester</a> | 
+            <a class="select-link-primary" asp-controller="Home" asp-action="LandingPage">Back</a>
         </p>
     </div>
 }

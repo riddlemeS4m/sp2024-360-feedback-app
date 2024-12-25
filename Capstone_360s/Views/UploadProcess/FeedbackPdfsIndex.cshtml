@@ -1,7 +1,11 @@
 ﻿@using Capstone_360s.Interfaces
 @using Capstone_360s.Models.FeedbackDb
+@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization
 
 @model IEnumerable<Capstone_360s.Models.FeedbackDb.FeedbackPdf>
+@inject IFeedbackDbServiceFactory factory
+@inject IAuthorizationService authorizationService
 
 @{
     ViewData["Title"] = "Round Feedback";
@@ -10,55 +14,80 @@
     var roundId = Context.Request.Query["roundId"].ToString();
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+    var project = await factory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
+
+    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 }
 
-<h1>@Model.ElementAt(0).Project.Name - Round @roundId PDFs</h1>
-@if (Model.Any())
+<br />
+<h2>@project.Name - <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Round @roundId</a> PDFs</h2>
+@if (Model.Any() && Model.ElementAt(0).Project.Name != null)
 {
-    <p>
-        <a class="btn btn-warning" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId"
-            asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
-        <a class="btn btn-primary" target="_blank" href="https://drive.google.com/drive/folders/@Model.ElementAt(0).ParentGDFolderId">View
-            Folder on Google Drive</a>
-    </p>
-
-    <div class="col-md-8">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => Model.ElementAt(0).FileName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => Model.ElementAt(0).CreatedAt)
-                </th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr onclick="navigateToSelect('https://drive.google.com/file/d/@item.GDFileId/view')">
-                        <td>
-                            @Html.DisplayFor(modelItem => item.FileName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.CreatedAt)
-                        </td>
-                        <td>
-                            <a target="_blank" href="https://drive.google.com/file/d/@item.GDFileId/view" >View on Google Drive</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+   <div>
+        <div class="row">
+            <div class="col-md-8">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>
+                                @Html.DisplayNameFor(model => Model.ElementAt(0).FileName)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => Model.ElementAt(0).CreatedAt)
+                        </th>
+                            <th>
+                                @Html.DisplayNameFor(model => Model.ElementAt(0).GDFileId)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr onclick="navigateToSelect('https://drive.google.com/file/d/@item.GDFileId/view')">
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.FileName)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.CreatedAt)
+                                </td>
+                                <td>
+                                    <a class="select-link-primary" target="_blank" href="https://drive.google.com/file/d/@item.GDFileId/view" >View on Google Drive</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-
 }
 else
 {
     <p>No PDFs found for this project.</p>
 }
+
+@if(isAdmin.Succeeded || isSponsor.Succeeded)
+{
+    <div>
+        <br />
+        <div class="form-group">
+            <a class="btn btn-primary" target="_blank" href="https://drive.google.com/drive/folders/@Model.ElementAt(0).ParentGDFolderId">View
+                Folder on Google Drive</a> | 
+            <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
+        </div>
+    </div>
+}
+else
+{
+    <div>
+        <br />
+        <div class="form-group">
+            <a class="btn btn-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@projectId">Back</a>
+        </div>
+    </div>
+}
+
 
 
 @section Scripts {

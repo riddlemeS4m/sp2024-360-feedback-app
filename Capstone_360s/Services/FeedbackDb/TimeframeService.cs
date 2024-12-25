@@ -25,7 +25,7 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             _logger.LogInformation("Getting timeframes by list of ids...");
 
-            return await _dbSet.Where(x => ids.Contains(x.Id)).ToListAsync();
+            return await _dbSet.Where(x => ids.Contains(x.Id) && !x.IsArchived).ToListAsync();
         }
     }
 }

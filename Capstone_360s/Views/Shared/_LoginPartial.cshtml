@@ -8,7 +8,7 @@
     </li> *@
     <li class="nav-item" style="align-self: center;">
         <form  class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-                <button type="submit" class="btn btn-danger ms-2 ms-lg-3" style="width: 100px; margin-right: 10px;">Log Out</button>
+                <button type="submit" class="btn btn-danger ms-2 ms-lg-3" style="width: 100px; margin-right: 10px; font-weight: bold;">Log Out</button>
         </form>
     </li>
 }
@@ -19,7 +19,7 @@ else
             <div>
                 <p>
                     <div class="form-group" style="display: flex; justify-content: center;">
-                        <button type="submit" class="btn btn-danger" style="width: 100px; margin-right: 10px;" name="provider" value="Microsoft" title="Log in using your Microsoft account">Log In</button>
+                        <button type="submit" class="btn btn-danger" style="width: 100px; margin-right: 10px; font-weight: bold;" name="provider" value="Microsoft" title="Log in using your Microsoft account">Log In</button>
                     </div>
                 </p>
             </div>

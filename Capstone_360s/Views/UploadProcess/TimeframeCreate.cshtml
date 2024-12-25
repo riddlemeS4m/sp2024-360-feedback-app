@@ -1,48 +1,82 @@
 ﻿@model Capstone_360s.Models.VMs.TimeframeCreateVM
 
 @{
-    ViewData["Title"] = "Create Timeframe";
+    ViewData["Title"] = "Create a Semester";
 }
 
-<h4>Create Timeframe</h4>
-<hr />
+<h2>Create a Semester</h2>
+
 <div class="row">
     <div class="col-md-4">
         <form asp-action="TimeframeCreate">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="OrganizationId" />
             <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
+                <label asp-for="Name" class="control-label">What semester is this?</label>
+                <input asp-for="Name" class="form-control" placeholder="(e.g., Fall 2024)" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
+            <br />
             <div class="form-group">
-                <label asp-for="NoOfProjects" class="control-label">How many projects do you want to create now?</label>
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Changing this setting will automatically create folders for each project."> </i><label asp-for="NoOfProjects" class="control-label">How many projects do you want to create now?</label>
                 <input type="number" id="noOfProjects" class="form-control" min="0" asp-for="NoOfProjects" />
                 <span asp-validation-for="NoOfProjects" class="text-danger"></span>
             </div>
+            <br />
             <div class="form-group">
-                <label asp-for="NoOfRounds" class="control-label">How many rounds will each project have?</label>
+                <label asp-for="StartDate" class="control-label">When does this semester start?</label>
+                <input id="startDate" asp-for="StartDate" class="form-control" type="date" />
+                <span asp-validation-for="StartDate" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <label asp-for="EndDate" class="control-label">When does this semester end?</label>
+                <input id="endDate" asp-for="EndDate" class="form-control" type="date" />
+                <span asp-validation-for="EndDate" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Changing this setting will restrict how many round folders each project can have. It does NOT automatically create these folders."> </i><label asp-for="NoOfRounds" class="control-label">How many rounds will each project have?</label>
                 <input type="number" id="noOfRounds" class="form-control" min="1" asp-for="NoOfRounds" />
                 <span asp-validation-for="NoOfRounds" class="text-danger"></span>
             </div>
+            <br />
 
             <div id="project-names-container">
                 <!-- project name inputs will be added here dynamically -->
             </div>
 
             <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+                <br />
+                <input class="btn btn-primary btn-lg" type="submit" value="Create" /> | 
+                <a class="select-link-primary" asp-action="TimeframesIndex" asp-route-organizationId="@Model.OrganizationId">Back</a>
             </div>
         </form>
     </div>
 </div>
 
 <div>
-    <a asp-action="TimeframesIndex" asp-route-id="@Model.OrganizationId">Back</a>
+    
 </div>
 
 @section Scripts {
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            // If the input has the min date, clear it and show placeholder-like text
+            if (dateInput.value === '0001-01-01') {
+                dateInput.value = '';  // Clear the value
+            }
+
+            if(endDateInput.value === '0001-01-01')
+            {
+                endDateInput.value = '';
+            }
+        });
+    </script>
 
     <script>
         document.getElementById('noOfProjects').addEventListener('input', function () {
@@ -58,7 +92,7 @@
                 div.classList.add('form-group');
 
                 const label = document.createElement('label');
-                label.textContent = `Project Name ${i + 1}`;
+                label.textContent = `Name of Project ${i + 1}`;
                 label.setAttribute('for', `ProjectNames_${i}`);
                 div.appendChild(label);
 
@@ -69,6 +103,8 @@
                 input.classList.add('form-control');
                 input.placeholder = 'Leave empty to auto-name';
                 div.appendChild(input);
+
+                div.appendChild(document.createElement('br'));
 
                 container.appendChild(div);
             }

@@ -37,7 +37,7 @@ namespace Capstone_360s.Controllers
         [Authorize]
         public async Task<IActionResult> LandingPage()
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
             var organizations = new List<Organization>();
 
             if(authorizationResult.Succeeded)
@@ -47,7 +47,10 @@ namespace Capstone_360s.Controllers
             }
             else
             {
-                var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid").Value);
+                var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value);
+                var localUserId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value);
+
+                userId = userId == localUserId ? userId : localUserId;
 
                 var organizationsIE = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(userId);
 
@@ -73,7 +76,10 @@ namespace Capstone_360s.Controllers
         [Authorize]
         public async Task<IActionResult> AssignUserToOrganizationConfirm(Guid organizationId)
         {
-            var userId = Guid.Parse(User.Claims.Where(x => x.Type == "uid").FirstOrDefault().Value);
+            var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value);
+            var localUserId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value);
+
+            userId = userId == localUserId ? userId : localUserId;
 
             await _dbServiceFactory.UserOrganizationService.AddAsync(new UserOrganization
             {
@@ -92,7 +98,7 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(UploadProcessController.TimeframesIndex), UploadProcessController.Name);
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public IActionResult OrganizationCreate()
         {
             _logger.LogInformation("A new organization needs to be created...");
@@ -101,7 +107,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> OrganizationCreate([Bind(nameof(Organization.Id),nameof(Organization.Name), nameof(Organization.Type))] Organization organization, 
             List<string> Names, List<string> Descriptions, List<int> Mins, List<int> Maxs, List<string> Qs, List<string> Examples)
         {

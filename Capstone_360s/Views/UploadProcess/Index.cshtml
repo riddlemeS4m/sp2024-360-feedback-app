@@ -5,7 +5,7 @@
 
 @{
     ViewData["Title"] = "Upload 360s";
-    var authorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var authorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 }
 
 <h1>Organizations</h1>

@@ -1,0 +1,75 @@
+@model Capstone_360s.Models.FeedbackDb.Timeframe
+
+@{
+    ViewData["Title"] = "Edit a Semester";
+}
+
+<h2>Edit a Semester</h2>
+
+<div class="row">
+    <div class="col-md-3">
+        <form asp-action="TimeframeEdit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="OrganizationId" />
+            <div class="form-group">
+                <label asp-for="Name" class="control-label">What semester is this?</label>
+                <input asp-for="Name" class="form-control" placeholder="(e.g., Fall 2024)" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <label asp-for="StartDate" class="control-label">When does this semester start?</label>
+                <input id="startDate" asp-for="StartDate" class="form-control" type="date" required/>
+                <span asp-validation-for="StartDate" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <label asp-for="EndDate" class="control-label">When does this semester end?</label>
+                <input id="endDate" asp-for="EndDate" class="form-control" type="date" required/>
+                <span asp-validation-for="EndDate" class="text-danger"></span>
+            </div>
+            <br />
+            <div class="form-group">
+                <label asp-for="NoOfRounds" class="control-label"></label>
+                <input asp-for="NoOfRounds" class="form-control" type="number"  min="1" />
+                <span asp-validation-for="NoOfRounds" class="text-danger"></span>
+            </div>
+            <br />
+
+            <div class="form-group">
+                <br />
+                <input class="btn btn-primary" type="submit" value="Submit Changes" /> | 
+                <a class="select-link-primary" asp-action="TimeframesIndex" asp-route-organizationId="@Model.OrganizationId">Back</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    
+</div>
+
+@section Scripts {
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            // If the input has the min date, clear it and show placeholder-like text
+            if (dateInput.value === '0001-01-01') {
+                dateInput.value = '';  // Clear the value
+            }
+
+            if(endDateInput.value === '0001-01-01')
+            {
+                endDateInput.value = '';
+            }
+        });
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

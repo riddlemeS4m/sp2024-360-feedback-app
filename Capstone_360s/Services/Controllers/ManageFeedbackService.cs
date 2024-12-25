@@ -101,7 +101,7 @@ namespace Capstone_360s.Services.Controllers
             var projects = await _dbServiceFactory.ProjectService.GetProjectsByTimeframeId(project.OrganizationId.ToString(), project.TimeframeId);
             var projectsList = projects.ToList();
 
-            if(projectsList.Count() == 0 || roundsList.Count() == 0)
+            if(projectsList.Count == 0 || roundsList.Count == 0)
             {
                 throw new Exception("There are no projects or rounds to link.");
             }
@@ -159,7 +159,73 @@ namespace Capstone_360s.Services.Controllers
             //     throw new Exception("Not every project has the correct amount of rounds.");
             // }
 
-            if(projectRounds.Count > 0){
+            if(projectRounds.Count > 0)
+            {
+                await _dbServiceFactory.ProjectRoundService.AddRange(projectRounds);
+            }
+        }
+
+        public async Task CreateProjectRoundsForOneProject(Project project)
+        {
+            var rounds = await _dbServiceFactory.RoundService.GetFirstNRounds(project.NoOfRounds);
+            var roundsList = rounds.ToList();
+
+            if(roundsList.Count < project.NoOfRounds)
+            {
+                if(roundsList.Count == 0)
+                {
+                    for(int i = 1; i <= project.NoOfRounds; i++)
+                    {
+                        roundsList.Add(new Round
+                        {
+                            Name = $"Round {i}"
+                        });
+                    }
+
+                    await _dbServiceFactory.RoundService.AddRange(roundsList);
+                }
+                else
+                {
+                    var noOfRoundsToMake = project.NoOfRounds - roundsList.Count;
+                    var roundsToMake = new List<Round>();
+
+                    for(int i = roundsList.Count + 1; i <= noOfRoundsToMake; i++)
+                    {
+                        roundsToMake.Add(new Round 
+                        {
+                            Name = $"Round {i}"
+                        });
+                    }
+
+                    await _dbServiceFactory.RoundService.AddRange(roundsToMake);
+                }
+            }
+
+            var projectRounds = new List<ProjectRound>();
+            var existingRounds = await _dbServiceFactory.ProjectRoundService.GetProjectRoundsByProjectId(project.Id.ToString());
+            for(int j = 0; j < roundsList.Count; j++)
+            {
+                if(!existingRounds.Any(x => x.RoundId == j + 1))
+                {
+                    var folderName = roundsList[j].Name;
+                    var projectRoundFolderId = await _driveService.CreateFolderAsync(folderName, project.GDFolderId);
+
+
+                    var projectRound = new ProjectRound
+                    {
+                        ProjectId = project.Id,
+                        RoundId = roundsList[j].Id,
+                        GDFolderId = projectRoundFolderId,
+                        ReleaseDate = null,
+                        DueDate = null
+                    };
+
+                    projectRounds.Add(projectRound);
+                }
+            }
+            
+            if(projectRounds.Count > 0)
+            {
                 await _dbServiceFactory.ProjectRoundService.AddRange(projectRounds);
             }
         }

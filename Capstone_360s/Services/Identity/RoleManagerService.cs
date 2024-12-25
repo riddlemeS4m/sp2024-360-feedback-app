@@ -1,6 +1,5 @@
 ﻿using Capstone_360s.Interfaces;
 using Capstone_360s.Interfaces.IService;
-using Capstone_360s.Services.Configuration;
 using Microsoft.Graph;
 using MySqlConnector;
 using System.Data;
@@ -9,20 +8,21 @@ namespace Capstone_360s.Services.Identity
 {
     public class RoleManagerService : IRoleManager
     {
-        public const string AdminOnlyPolicy = "AdministratorOnly";
-        public const string SponsorOnlyPolicy = "SponsorOnly";
-        public const string LeadOnlyPolicy = "LeadOnly";
+        public const string SystemAdministratorOnlyPolicy = "SystemAdministratorOnly";
+        public const string ProgramManagerOnlyPolicy = "ProgramManagerOnly";
+        public const string InstructorOnlyPolicy = "InstructorOnly";
+        public const string TeamLeadOnlyPolicy = "TeamLeadOnly";
         public const string MemberOnlyPolicy = "MemberOnly";
-        private const int CommandTimeoutSeconds = 5;                // Command execution timeout
-        private const int MaxRetries = 3;                            // Number of retry attempts
+        private const int CommandTimeoutSeconds = 5;
+        private const int MaxRetries = 3;
 
         private readonly string _connectionString;
         private readonly IMicrosoftGraph _microsoftGraphClient;
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
-        private readonly CustomConfigurationService _config;
+        private readonly IConfigureEnvironment _config;
         private readonly ILogger<RoleManagerService> _logger;
 
-        public RoleManagerService(CustomConfigurationService config, 
+        public RoleManagerService(IConfigureEnvironment config, 
             IMicrosoftGraph microsoftGraph,
             IFeedbackDbServiceFactory dbServiceFactory,
             ILogger<RoleManagerService> logger) 
@@ -78,6 +78,11 @@ namespace Capstone_360s.Services.Identity
                     _logger.LogInformation("Disposing connection...");
                     await connection.DisposeAsync();
 
+                    if(!roles.Any())
+                    {
+                        _logger.LogInformation("User does not have any defined roles.");
+                    }
+
                     return roles;
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
@@ -102,9 +107,9 @@ namespace Capstone_360s.Services.Identity
             return new List<string>();  // Fallback if retries exhausted
         }
 
-        public async Task<IEnumerable<Capstone_360s.Models.FeedbackDb.User>> GetUsersByRole(string role)
+        public async Task<IEnumerable<Capstone_360s.Models.FeedbackDb.User>> GetUsersByRole(string organizationId, string role)
         {
-            _logger.LogInformation("Getting users in role 'POC'");
+            _logger.LogInformation("Getting users by role...");
 
             int attempt = 0;
 
@@ -150,7 +155,23 @@ namespace Capstone_360s.Services.Identity
                     _logger.LogInformation("Disposing connection...");
                     await connection.DisposeAsync();
 
-                    return users;
+                    if(!users.Any())
+                    {
+                        _logger.LogInformation("No users found with the specified role.");
+                    }
+
+                    var orgUsers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(organizationId));
+
+                    var returnedUsers = new List<Capstone_360s.Models.FeedbackDb.User>();
+                    foreach(var user in users)
+                    {
+                        if(orgUsers.Any(u => u.UserId == user.Id))
+                        {
+                            returnedUsers.Add(user);
+                        }
+                    }
+
+                    return returnedUsers;
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
                 {
@@ -174,7 +195,7 @@ namespace Capstone_360s.Services.Identity
             return new List<Capstone_360s.Models.FeedbackDb.User>();  // Fallback if retries exhausted
         }
 
-        public async Task<Capstone_360s.Models.FeedbackDb.User> AddNewUser(string email)
+        public async Task<Capstone_360s.Models.FeedbackDb.User> AddNewUser(string organizationId, string email)
         {
             if (string.IsNullOrEmpty(email))
             {
@@ -198,7 +219,18 @@ namespace Capstone_360s.Services.Identity
                         Email = email
                     };
 
-                    await _dbServiceFactory.UserService.AddAsync(user);
+                    user = await _dbServiceFactory.UserService.AddAsync(user);
+
+                    var userOrgs = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(user.Id);
+
+                    if(!userOrgs.Any(x => x.OrganizationId == Guid.Parse(organizationId)))
+                    {
+                        await _dbServiceFactory.UserOrganizationService.AddAsync(new Models.FeedbackDb.UserOrganization {
+                            UserId = user.Id,
+                            OrganizationId = Guid.Parse(organizationId)
+                        });
+                    }
+                    
                     return user;
                 }
                 else
@@ -206,8 +238,18 @@ namespace Capstone_360s.Services.Identity
                     if (localUser.MicrosoftId == Guid.Empty || localUser.MicrosoftId == null)
                     {
                         localUser.MicrosoftId = Guid.Parse(microsoftUser.Id);
-                        await _dbServiceFactory.UserService.UpdateAsync(localUser);
-                    }
+                        localUser = await _dbServiceFactory.UserService.UpdateAsync(localUser);
+
+                        var userOrgs = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(localUser.Id);
+
+                        if(!userOrgs.Any(x => x.OrganizationId == Guid.Parse(organizationId)))
+                        {
+                            await _dbServiceFactory.UserOrganizationService.AddAsync(new Models.FeedbackDb.UserOrganization {
+                                UserId = localUser.Id,
+                                OrganizationId = Guid.Parse(organizationId)
+                            });
+                        }
+                    }                    
 
                     return localUser;
                 }   
@@ -217,16 +259,29 @@ namespace Capstone_360s.Services.Identity
                 _logger.LogWarning("Microsoft Graph ServiceException: {0}", ex.Message);
                 return new Models.FeedbackDb.User();
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logger.LogError("An error occurred in AddNewUser: {0}", ex.Message);
+                _logger.LogError("An error occurred in AddNewUser: {0}, {1}", ex.GetType(), ex.Message);
                 return new Models.FeedbackDb.User();
             }
         }
 
-        public async Task AddUserToRole(string id, string role)
+        public async Task AddUserToRole(string organizationId, string userId, string role)
         {
             _logger.LogInformation("Getting users in role 'POC'");
+
+            var roles = await GetRoles(Guid.Parse(userId));
+            var roleExists = roles.Contains(role);
+
+            if(roleExists)
+            {
+                _logger.LogInformation("User is already in role");
+                return;
+            }
 
             int attempt = 0;
 
@@ -254,7 +309,7 @@ namespace Capstone_360s.Services.Identity
 
                     _logger.LogInformation("Adding parameters...");
                     command.Parameters.AddWithValue("@role", role);
-                    command.Parameters.AddWithValue("@user", id);
+                    command.Parameters.AddWithValue("@user", userId);
 
                     _logger.LogInformation("Executing writer...");
                     await command.ExecuteNonQueryAsync();

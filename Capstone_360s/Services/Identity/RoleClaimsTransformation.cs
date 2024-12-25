@@ -30,6 +30,7 @@ namespace Capstone_360s.Services.Identity
                 {
                     _logger.LogWarning("No existing roles were found.");
                     var userId = identity.FindFirst("uid")?.Value;
+
                     if (!string.IsNullOrEmpty(userId))
                     {
                         var roles = await _roleService.GetRoles(Guid.Parse(userId));
@@ -38,14 +39,47 @@ namespace Capstone_360s.Services.Identity
                         {
                             identity.AddClaim(new Claim(ClaimTypes.Role, role));
                         }
+
+                        existingRoles.AddRange(roles);
                     }
                 }
                 else
                 {
                     _logger.LogWarning($"Existing roles were found: {existingRoles.ElementAt(0)}");
                 }
-            }
+
+                // Apply role inheritance/privilege elevation
+                ApplyRoleInheritance(identity, existingRoles);
+            }            
+
             return principal;
+        }
+
+        private void ApplyRoleInheritance(ClaimsIdentity identity, List<string> roles)
+        {
+            // Role hierarchy map (Higher -> Lower roles)
+            var roleHierarchy = new Dictionary<string, List<string>>
+            {
+                { "SystemAdministrator", new List<string> { "ProgramManager", "Instructor", "TeamLead" } },
+                { "ProgramManager", new List<string> { "Instructor", "TeamLead" } },
+                { "TeamLead", new List<string> { "TeamLead" }}
+            };
+
+            // Iterate over the user's current roles and add inherited roles
+            foreach (var role in roles)
+            {
+                if (roleHierarchy.TryGetValue(role, out var inheritedRoles))
+                {
+                    foreach (var inheritedRole in inheritedRoles)
+                    {
+                        if (!roles.Contains(inheritedRole))  // Avoid duplication
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Role, inheritedRole));
+                            _logger.LogInformation($"Role '{inheritedRole}' inherited by '{role}'");
+                        }
+                    }
+                }
+            }
         }
     }
 }

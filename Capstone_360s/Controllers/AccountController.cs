@@ -12,6 +12,7 @@ namespace Capstone_360s.Controllers
 {
     public class AccountController : Controller
     {
+        public static string Name = "Account";
         private readonly IRoleManager _roleManager;
         private readonly IMicrosoftGraph _microsoftGraphService;
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
@@ -85,8 +86,8 @@ namespace Capstone_360s.Controllers
                 }
                 else
                 {
-                    _logger.LogError("No local identity found for the user.");
-                    return BadRequest("No local identity found.");
+                    _logger.LogError("There was an error creating the local user claim.");
+                    return BadRequest("User could not be created locally.");
                 }
             }
             catch (ServiceException ex)

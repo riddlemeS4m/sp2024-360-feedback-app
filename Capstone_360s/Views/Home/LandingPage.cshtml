@@ -6,72 +6,69 @@
 
 @{
     ViewData["Title"] = "Landing Page";
-    var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 }
 
 <br />
-<h1>Choose an Organization</h1>
+<h1>Choose a Class</h1>
 
 @if(Model.Any())
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>
-                    @Html.DisplayNameFor(model => model.Name)
-                </th>
-                @if(isAuthorized.Succeeded)
-                {
-                    <th>
-                        @Html.DisplayNameFor(model => model.Id)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Type)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.GDFolderId)
-                    </th>
-                }
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", "UploadProcess", new { organizationId = item.Id })')">
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Name)
-                    </td>
-                    @if(isAuthorized.Succeeded)
+    <div class="row">
+        <div class="col-md-9">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => model.Name)
+                        </th>
+                        @if(isAuthorized.Succeeded)
+                        {
+                            <th>
+                                @Html.DisplayNameFor(model => model.Type)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.GDFolderId)
+                            </th>
+                            <th></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
                     {
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Id)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Type)
-                        </td>
-                        <td>
-                            <a class="select-link" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
-                        </td>                        
+                        <tr onclick="navigateToSelect('@Url.Action("TimeframesIndex", "UploadProcess", new { organizationId = item.Id })')">
+                            <td>
+                                <a class="select-link-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                            </td>
+                            @if(isAuthorized.Succeeded)
+                            {
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Type)
+                                </td>
+                                <td>
+                                    <a class="select-link-primary" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
+                                </td> 
+                                <td>
+                                    <a class="select-link-primary disabled" asp-controller="UploadProcess" asp-action="OrganizationEdit" asp-route-organizationId="@item.Id">Edit</a>
+                                </td>                       
+                            }                   
+                        </tr>
                     }
-
-                    <td>
-                        <a class="select-link" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@item.Id">Select</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                </tbody>
+            </table>
+        </div>
+    </div>
 }
 else
 {
     <div>
-        <p>
-            <a class="btn btn-primary" asp-action="AssignUserToOrganization">Select an Organization</a>
-        </p>
+        <p>You are not currently assigned to a class. Click 'Select a Class' to get started.</p>
     </div>
     <div>
-        <p>You are not currently assigned to an organization. Click 'Select an Organization' to get started.</p>
+        <p>
+            <a class="btn btn-primary" asp-action="AssignUserToOrganization">Select a Class</a>
+        </p>
     </div>
 }
 
@@ -80,10 +77,10 @@ else
     <div class="form-group">
         <br>
         <p>
-            Don't see the organization you're looking for?
+            Don't see the class you're looking for?
         </p>
         <p>
-            <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create New Organization</a>
+            <a class="btn btn-primary" asp-controller="Home" asp-action="OrganizationCreate">Create a New Class</a>
         </p>
     </div>
 }

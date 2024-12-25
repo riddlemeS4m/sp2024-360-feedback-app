@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Capstone_360s.Controllers
 {
-    [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+    [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
     [Route("{organizationId}/[controller]/[action]")]
     public class UsersController : Controller
     {

@@ -1,6 +1,5 @@
 ﻿using Capstone_360s.Interfaces;
 using Capstone_360s.Interfaces.IService;
-using Capstone_360s.Services.Configuration;
 using Microsoft.Graph;
 using MySqlConnector;
 using System.Data;
@@ -9,20 +8,21 @@ namespace Capstone_360s.Services.Identity
 {
     public class RoleManagerService : IRoleManager
     {
-        public const string AdminOnlyPolicy = "AdministratorOnly";
-        public const string SponsorOnlyPolicy = "SponsorOnly";
-        public const string LeadOnlyPolicy = "LeadOnly";
+        public const string SystemAdministratorOnlyPolicy = "SystemAdministratorOnly";
+        public const string ProgramManagerOnlyPolicy = "ProgramManagerOnly";
+        public const string InstructorOnlyPolicy = "InstructorOnly";
+        public const string TeamLeadOnlyPolicy = "TeamLeadOnly";
         public const string MemberOnlyPolicy = "MemberOnly";
-        private const int CommandTimeoutSeconds = 5;                // Command execution timeout
-        private const int MaxRetries = 3;                            // Number of retry attempts
+        private const int CommandTimeoutSeconds = 5;
+        private const int MaxRetries = 3;
 
         private readonly string _connectionString;
         private readonly IMicrosoftGraph _microsoftGraphClient;
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
-        private readonly CustomConfigurationService _config;
+        private readonly IConfigureEnvironment _config;
         private readonly ILogger<RoleManagerService> _logger;
 
-        public RoleManagerService(CustomConfigurationService config, 
+        public RoleManagerService(IConfigureEnvironment config, 
             IMicrosoftGraph microsoftGraph,
             IFeedbackDbServiceFactory dbServiceFactory,
             ILogger<RoleManagerService> logger) 

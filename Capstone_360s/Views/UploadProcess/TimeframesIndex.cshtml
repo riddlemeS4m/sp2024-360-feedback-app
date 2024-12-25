@@ -11,7 +11,7 @@
 
     var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
     var organization = await feedbackDbServiceFactory.OrganizationService.GetByIdAsync(Guid.Parse(organizationId));
-    var isAuthorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var isAuthorized = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 }
 
 <br />

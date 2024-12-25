@@ -12,8 +12,8 @@
 
     var projectId = Context.Request.Query["projectId"].ToString();
     var project = await feedbackDbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));    
-    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
-    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
+    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 }
 
 <br>

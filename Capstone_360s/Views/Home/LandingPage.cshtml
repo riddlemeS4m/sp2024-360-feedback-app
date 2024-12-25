@@ -6,7 +6,7 @@
 
 @{
     ViewData["Title"] = "Landing Page";
-    var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+    var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 }
 
 <br />

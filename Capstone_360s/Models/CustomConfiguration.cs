@@ -4,22 +4,23 @@
     {
         public const string Environment = "ASPNETCORE_ENVIRONMENT";
         public const string SendGridKey = "SendGrid";
-        public const string MicrosoftClientId = "Authentication:Microsoft:ClientId";
-        public const string MicrosoftTenantId = "Authentication:Microsoft:TenantId";
-        public const string MicrosoftClientSecret = "Authentication:Microsoft:ClientSecret";
-        public const string MicrosoftDomain = "Authentication:Microsoft:Domain";
-        public const string MicrosoftTokenAcquisitionScopes = "Authentication:Microsoft:Scopes:Token";
-        public const string MicrosoftGraphScopes = "Authentication:Microsoft:Scopes:Graph";
-        public const string MicrosoftInstance = "Authentication:Microsoft:Instance";
-        public const string MicrosoftGraphBaseUrl = "Authentication:Microsoft:GraphBaseUrl";
-        public const string MicrosoftCallbackPath = "Authentication:Microsoft:CallbackPath";
-        public const string ConnectionStringPrefix = "ConnectionStrings:";
-        public const string GoogleDriveCredentials = "GoogleCredential";
-        public const string AdministratorRole = "Roles:Administrator";
-        public const string SponsorRole = "Roles:Sponsor";
-        public const string LeadRole = "Roles:Lead";
-        public const string MemberRole = "Roles:Member";
-        public const string CapstoneOrg = "SupportedOrgs:Capstone";
+        public const string MicrosoftClientIdKey = "Authentication:Microsoft:ClientId";
+        public const string MicrosoftTenantIdKey = "Authentication:Microsoft:TenantId";
+        public const string MicrosoftClientSecretKey = "Authentication:Microsoft:ClientSecret";
+        public const string MicrosoftDomainKey = "Authentication:Microsoft:Domain";
+        public const string MicrosoftTokenAcquisitionScopesKey = "Authentication:Microsoft:Scopes:Token";
+        public const string MicrosoftGraphScopesKey = "Authentication:Microsoft:Scopes:Graph";
+        public const string MicrosoftInstanceKey = "Authentication:Microsoft:Instance";
+        public const string MicrosoftGraphBaseUrlKey = "Authentication:Microsoft:GraphBaseUrl";
+        public const string MicrosoftCallbackPathKey = "Authentication:Microsoft:CallbackPath";
+        public const string ConnectionStringKeyPrefix = "ConnectionStrings:";
+        public const string GoogleDriveCredentialSection = "GoogleCredential";
+        public const string SystemAdministratorRoleKey = "Roles:SystemAdministrator";
+        public const string ProgramManagerRoleKey = "Roles:ProgramManager";
+        public const string InstructorRoleKey = "Roles:Instructor";
+        public const string TeamLeadRoleKey = "Roles:TeamLead";
+        public const string MemberRoleKey = "Roles:Member";
+        public const string CapstoneOrganizationFunctionalityKey = "SupportedOrgs:Capstone";
 
         public static void TestKey(object key)
         {
@@ -30,12 +31,12 @@
 
         public static string FeedbackDbConnectionString(string env)
         {     
-            return ConnectionStringPrefix + env + ":Feedback";
+            return ConnectionStringKeyPrefix + env + ":Feedback";
         }
 
         public static string RolesDbConnectionString(string env)
         {
-            return ConnectionStringPrefix + env + ":System";
+            return ConnectionStringKeyPrefix + env + ":System";
         }
     }
 }

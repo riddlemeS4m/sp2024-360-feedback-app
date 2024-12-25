@@ -12,7 +12,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public IActionResult UploadRoster(string organizationId, int timeframeId)
         {
             if(string.IsNullOrEmpty(organizationId) || timeframeId == 0)
@@ -24,7 +24,7 @@ namespace Capstone_360s.Controllers
         }     
 
         [HttpGet]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> GeneratePdfs(string organizationId, int timeframeId, int roundId)
         {
             if(string.IsNullOrEmpty(organizationId) || timeframeId == 0 || roundId == 0)

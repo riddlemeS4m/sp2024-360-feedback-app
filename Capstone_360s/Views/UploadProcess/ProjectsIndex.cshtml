@@ -13,8 +13,8 @@
     var timeframeId = Context.Request.Query["timeframeId"].ToString();
     var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
     
-    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
-    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
+    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 }
 
 <style>
@@ -22,8 +22,8 @@
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .btn-danger:hover {
-        background-color: #c82333;
+    .btn-warning:hover {
+        background-color: #cf850f;
         transform: scale(1.05);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     }
@@ -63,9 +63,8 @@
                                 <th>
                                     @Html.DisplayNameFor(model => model.GDFolderId)
                                 </th>
+                                <th></th>
                             }
-                            
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -76,7 +75,7 @@
                                     <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
                                 </td>
                                 <td>
-                                    @if(item.POCId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
+                                    @if(item.POCId == null && isSponsor.Succeeded)
                                     {
                                         <a class="select-link-primary" asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
                                     }
@@ -90,7 +89,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if(item.ManagerId == null && (isAdmin.Succeeded || isSponsor.Succeeded))
+                                    @if(item.ManagerId == null && isSponsor.Succeeded)
                                     {
                                         <a class="select-link-primary" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
                                     }
@@ -118,43 +117,47 @@
                     </tbody>
                 </table>
             </div>
-            <div class="col-md-3">
-                <div style="margin-top: 1.5rem;">
-                    <h4 style="text-align: center;">
-                        Ready to upload?
-                    </h4>
-                    <hr />
-                    <div style="text-align:center;">
+            <div class="col-md-3" style="border-left: 1px black solid">
+                <div>
                         @if(isAdmin.Succeeded)
                         {
-                            <p style="width: 60%; margin: 0 auto;">
-                                Update a class roster.
-                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
-                            </p>
-                            <div style="margin: 1rem;">
-                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
-                            </div>
-                            <br />
-                            <p style="width: 60%; margin: 0 auto;">
-                                Upload survey response data.
-                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Upload data from Qualtrics/Microsoft Forms/Third-Party Vendor. No project folders, rosters, or team assignments are required to perform this action, as all this is checked automatically."></i>
-                            </p>
-                            <div style="margin: 1rem;">
-                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
+                            <h3 style="text-align: center;">
+                                Admin Tools
+                            </h3>
+                            <hr />
+                            <div style="text-align:center;">
+                                <div class="card">
+                                    <h5 class="card-header">Upload a Class Roster</h5>
+                                    <div class="card-body">
+                                        @* <h5 class="card-title">Special title treatment</h5> *@
+                                        <p class="card-text" style="font-size: smaller;">Want to take full advantage of the 360 Feedback Portal's capabilities? Download your class roster from Blackboard, and upload it here to assign your students to groups.</p>
+                                        <a class="btn btn-success btn-lg button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster</a>
+                                    </div>
+                                </div>
+                                
+                                <br />
+                                <div class="card">
+                                    <h5 class="card-header">Upload Survey Responses</h5>
+                                    <div class="card-body">
+                                        @* <h5 class="card-title">Special title treatment</h5> *@
+                                        <p class="card-text" style="font-size: smaller;">Using an external tool like Qualtrics to collect your survey responses? Upload a CSV file of the responses here to start generating anonymized PDFs for each student.</p>
+                                        <a class="btn btn-warning button btn-lg button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Surveys</a>
+                                    </div>
+                                </div>
                             </div>
                         }
                         else if(isSponsor.Succeeded)
                         {
-                            <p style="width: 60%; margin: 0 auto;">
-                                Step 1: Upload your class roster.
-                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
-                            </p>
-                            <div style="margin: 1rem;">
-                                <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                            <div style="text-align:center;">
+                                <p style="width: 60%; margin: 0 auto;">
+                                    Step 1: Upload your class roster.
+                                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
+                                </p>
+                                <div style="margin: 1rem;">
+                                    <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
+                                </div>
                             </div>
                         }
-                        
-                    </div>
                 </div>
             </div>
         </div>

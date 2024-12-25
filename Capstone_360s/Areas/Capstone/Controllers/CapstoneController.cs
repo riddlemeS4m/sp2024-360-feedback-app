@@ -25,7 +25,7 @@ namespace Capstone_360s.Areas.Capstone.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> UploadRoster(IFormFile roster, DateTime filterDate, int roundId, [FromQuery] int timeframeId, [FromQuery] string organizationId)
         {
             if(roster == null || filterDate == DateTime.MinValue || roundId == 0 || timeframeId == 0 || string.IsNullOrEmpty(organizationId))
@@ -44,7 +44,7 @@ namespace Capstone_360s.Areas.Capstone.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> GeneratePdfs([FromQuery] string organizationId, [FromQuery] int timeframeId, [FromQuery] int roundId)
         {
             if(roundId == 0 || timeframeId == 0 || string.IsNullOrEmpty(organizationId))

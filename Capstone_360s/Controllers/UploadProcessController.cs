@@ -23,14 +23,14 @@ namespace Capstone_360s.Controllers
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
         private readonly IRoleManager _roleManager;
         private readonly IAuthorizationService _authService;
-        private readonly CustomConfigurationService _config;
+        private readonly IConfigureEnvironment _config;
         private readonly ILogger<UploadProcessController> _logger;
         public UploadProcessController(
             IManageFeedback manager,
             IFeedbackDbServiceFactory serviceFactory,
             IRoleManager roleManager,
             IAuthorizationService authService,
-            CustomConfigurationService config,
+            IConfigureEnvironment config,
             ILogger<UploadProcessController> logger) 
         { 
             _manager = manager;
@@ -41,7 +41,7 @@ namespace Capstone_360s.Controllers
             _logger = logger;
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation("Starting upload process...");
@@ -56,7 +56,7 @@ namespace Capstone_360s.Controllers
         {
             _logger.LogInformation("Moving to the timeframes step...");
 
-            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
 
             List<Timeframe>? timeframes;
             if (isAdmin.Succeeded)
@@ -78,7 +78,7 @@ namespace Capstone_360s.Controllers
             return View(timeframes);
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public IActionResult TimeframeCreate()
         {
             _logger.LogInformation("A new timeframe needs to be created...");
@@ -93,7 +93,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> TimeframeCreate([Bind(nameof(Timeframe.Id),nameof(Timeframe.OrganizationId),nameof(Timeframe.Name),nameof(Timeframe.NoOfProjects),nameof(Timeframe.NoOfRounds),nameof(Timeframe.StartDate), nameof(Timeframe.EndDate))] Timeframe timeframe, 
             IEnumerable<string> ProjectNames)
         {
@@ -131,7 +131,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> TimeframeEdit(int timeframeId)
         {
             _logger.LogInformation("Editing a timeframe...");
@@ -149,7 +149,7 @@ namespace Capstone_360s.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> TimeframeEdit([Bind(nameof(Timeframe.Id),nameof(Timeframe.OrganizationId),nameof(Timeframe.Name),nameof(Timeframe.NoOfRounds),nameof(Timeframe.StartDate), nameof(Timeframe.EndDate))] Timeframe timeframe)
         {
             if(string.IsNullOrEmpty(timeframe.Name))
@@ -183,7 +183,7 @@ namespace Capstone_360s.Controllers
         {
             _logger.LogInformation("Moving to the projects step...");
 
-            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
+            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
             
             List<Project>? projects;
             if (isAdmin.Succeeded)
@@ -205,7 +205,7 @@ namespace Capstone_360s.Controllers
             return View(projects);
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectEdit(int timeframeId, string projectId)
         {
             if(timeframeId == 0 || string.IsNullOrEmpty(projectId))
@@ -224,8 +224,8 @@ namespace Capstone_360s.Controllers
 
             var currentTeamMemberIds = project.TeamMembers.Select(x => x.UserId);
 
-            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
-            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
+            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
             var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
 
             var pocItems = pocs.OrderBy(x => x.FirstName)
@@ -261,7 +261,7 @@ namespace Capstone_360s.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectEdit(ProjectEditVM vm, string POCEmail, string ManagerEmail, string NewTeamMembers)
         {
             var newProject = vm.Project;
@@ -283,8 +283,8 @@ namespace Capstone_360s.Controllers
             var currentTeamMemberIds = oldProject.TeamMembers.Select(x => x.UserId);
                       
 
-            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
-            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
+            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
             var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
 
             var pocItems = pocs.OrderBy(x => x.FirstName)
@@ -327,7 +327,7 @@ namespace Capstone_360s.Controllers
                     return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
                 }
                 
-                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.POC.Id.ToString(), _config.Sponsor);
+                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.POC.Id.ToString(), _config.Instructor);
             }
 
             if(managerCondition)
@@ -339,7 +339,7 @@ namespace Capstone_360s.Controllers
                     return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
                 }
 
-                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.Manager.Id.ToString(), _config.Lead);
+                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.Manager.Id.ToString(), _config.TeamLead);
             }
 
             if(string.IsNullOrEmpty(NewTeamMembers))
@@ -449,7 +449,7 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = vm.Project.TimeframeId, projectId = vm.Project.Id });
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectRoundCreate(int timeframeId)
         {
             _logger.LogInformation("Project rounds need to be created...");
@@ -476,7 +476,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectRoundCreate([Bind(nameof(Project.Id),nameof(Project.OrganizationId),nameof(Project.TimeframeId),nameof(Project.NoOfRounds))] Project project, 
             List<DateTime> RoundStartDates, List<DateTime> RoundEndDates)
         {
@@ -519,8 +519,8 @@ namespace Capstone_360s.Controllers
         {
             _logger.LogInformation("Moving to the feedback step...");
 
-            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.AdminOnlyPolicy);
-            var isSponsor = await _authService.AuthorizeAsync(User, RoleManagerService.SponsorOnlyPolicy);
+            var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+            var isSponsor = await _authService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
             
             List<FeedbackPdf>? pdfs;
             if (isAdmin.Succeeded || isSponsor.Succeeded)
@@ -553,14 +553,14 @@ namespace Capstone_360s.Controllers
             return View(pdfs);
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> RouteUploadRoster(int timeframeId)
         {
             var orgType = (await _dbServiceFactory.OrganizationService.GetByIdAsync(Guid.Parse(OrganizationId))).Type;
             return RedirectToAction(nameof(BaseController.UploadRoster), orgType, new { area = orgType, organizationId = OrganizationId, timeframeId = timeframeId });
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> AssignPOC(string projectId)
         {
             if(string.IsNullOrEmpty(projectId))
@@ -574,7 +574,7 @@ namespace Capstone_360s.Controllers
                 Project = project,
             };
 
-            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
+            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
             var items = new List<SelectListItem>();
 
             if(users != null)
@@ -595,7 +595,7 @@ namespace Capstone_360s.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> AssignPOC(string projectId, string POCEmail, string SelectedPOC)
         {
             if(string.IsNullOrEmpty(projectId))
@@ -607,7 +607,7 @@ namespace Capstone_360s.Controllers
 
             if(string.IsNullOrEmpty(POCEmail) && string.IsNullOrEmpty(SelectedPOC))
             {
-                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Sponsor);
+                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
                 var items = new List<SelectListItem>();
 
                 if(pocs != null)
@@ -647,7 +647,7 @@ namespace Capstone_360s.Controllers
                     return BadRequest($"Couldn't add user");
                 }
 
-                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Sponsor);
+                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Instructor);
             }
             else
             {
@@ -662,9 +662,9 @@ namespace Capstone_360s.Controllers
                 }
 
                 var roles = await _roleManager.GetRoles(user.Id);
-                if(!roles.Contains(_config.Sponsor))
+                if(!roles.Contains(_config.Instructor))
                 {
-                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Sponsor);
+                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Instructor);
                 }
             }
 
@@ -675,7 +675,7 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), new { timeframeId = project.TimeframeId, organizationId = OrganizationId });
         }
 
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> AssignManager(string projectId)
         {
             if(string.IsNullOrEmpty(projectId))
@@ -689,7 +689,7 @@ namespace Capstone_360s.Controllers
                 Project = project,
             };
 
-            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
             var items = new List<SelectListItem>();
 
             if(users != null)
@@ -710,7 +710,7 @@ namespace Capstone_360s.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         
         public async Task<IActionResult> AssignManager(string projectId, string ManagerEmail, string SelectedManager)
         {
@@ -724,7 +724,7 @@ namespace Capstone_360s.Controllers
 
             if(string.IsNullOrEmpty(ManagerEmail) && string.IsNullOrEmpty(SelectedManager))
             {
-                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Lead);
+                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
                 var items = new List<SelectListItem>();
 
                 if(pocs != null)
@@ -761,7 +761,7 @@ namespace Capstone_360s.Controllers
                     return View(vm);
                 }
 
-                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Lead);
+                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.TeamLead);
             }
             else
             {
@@ -776,9 +776,9 @@ namespace Capstone_360s.Controllers
                 }
 
                 var roles = await _roleManager.GetRoles(user.Id);
-                if(!roles.Contains(_config.Lead))
+                if(!roles.Contains(_config.TeamLead))
                 {
-                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Lead);
+                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.TeamLead);
                 }
             }
 
@@ -790,7 +790,7 @@ namespace Capstone_360s.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = RoleManagerService.AdminOnlyPolicy)]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public IActionResult UploadBlackboardRoster(int timeframeId)
         {
             return View();

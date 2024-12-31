@@ -23,7 +23,7 @@
     <br /><br />
 </div> *@
 
-@if(Model.ProjectRounds.Any())
+@if(Model.ProjectRounds.Any() && !string.IsNullOrEmpty(Model.ProjectRounds.ElementAt(0)?.Project.Name))
 {
     <div id="center-everything">
         <div class="col-md-8">

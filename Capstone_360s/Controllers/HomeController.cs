@@ -37,10 +37,11 @@ namespace Capstone_360s.Controllers
         [Authorize]
         public async Task<IActionResult> LandingPage()
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+            var isAdmin = await _authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+            var isInstructor = await _authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
             var organizations = new List<Organization>();
 
-            if(authorizationResult.Succeeded)
+            if(isAdmin.Succeeded)
             {
                 var organizationsIE = await _dbServiceFactory.OrganizationService.GetAllAsync();
                 organizations = organizationsIE.ToList();
@@ -54,7 +55,7 @@ namespace Capstone_360s.Controllers
 
                 var organizationsIE = await _dbServiceFactory.UserOrganizationService.GetOrganizationsByUserId(userId);
 
-                if (organizationsIE == null)
+                if (organizationsIE == null && isInstructor.Succeeded)
                 {
                     return RedirectToAction(nameof(AssignUserToOrganization));
                 }
@@ -65,7 +66,7 @@ namespace Capstone_360s.Controllers
             return View(organizations);
         }
 
-        [Authorize]
+        [Authorize(Policy = RoleManagerService.InstructorOnlyPolicy)]
         public async Task<IActionResult> AssignUserToOrganization()
         {
             var organizations = await _dbServiceFactory.OrganizationService.GetAllAsync();
@@ -73,7 +74,7 @@ namespace Capstone_360s.Controllers
             return View(organizations);
         }
 
-        [Authorize]
+        [Authorize(Policy = RoleManagerService.InstructorOnlyPolicy)]
         public async Task<IActionResult> AssignUserToOrganizationConfirm(Guid organizationId)
         {
             var userId = Guid.Parse(User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value);

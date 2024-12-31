@@ -285,13 +285,19 @@ namespace Capstone_360s.Services.Configuration
 
         public static IServiceCollection AddControllerManagers(this IServiceCollection services)
         {
-            services.AddTransient<IManageFeedback, ManageFeedbackService>(sp => {
-                var factory = sp.GetRequiredService<IFeedbackDbServiceFactory>();
-                var drive = sp.GetRequiredService<IGoogleDrive>();
-                var logger = sp.GetRequiredService<ILogger<ManageFeedbackService>>();
-                
-                return new ManageFeedbackService(factory, drive, logger);
-            });
+            using (var scope = services.BuildServiceProvider().CreateScope())
+            {
+                var config = scope.ServiceProvider.GetRequiredService<IConfigureEnvironment>();
+
+                services.AddTransient<IManageFeedback, ManageFeedbackService>(sp => {
+                    var factory = sp.GetRequiredService<IFeedbackDbServiceFactory>();
+                    var drive = sp.GetRequiredService<IGoogleDrive>();
+                    var manager = sp.GetRequiredService<IRoleManager>();
+                    var logger = sp.GetRequiredService<ILogger<ManageFeedbackService>>();
+                    
+                    return new ManageFeedbackService(factory, drive, manager, config, logger);
+                });
+            }
 
             return services;
         }

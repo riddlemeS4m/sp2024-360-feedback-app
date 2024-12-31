@@ -57,7 +57,8 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             _logger.LogInformation("Getting project and team members by project id...");
             
-            var project = await _dbSet.Include(x => x.POC)
+            var project = await _dbSet
+                .Include(x => x.POC)
                 .Include(x => x.Manager)
                 .Include(x => x.Timeframe)
                 .Where(x => x.Id == Guid.Parse(projectId))

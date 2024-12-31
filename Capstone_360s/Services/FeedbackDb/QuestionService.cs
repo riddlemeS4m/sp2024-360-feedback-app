@@ -14,7 +14,7 @@ namespace Capstone_360s.Services.FeedbackDb
 
         public async Task<IEnumerable<Question>> GetQuestionsByOrganizationId(Guid organizationId)
         {
-            _logger.LogInformation($"Getting questions for round {organizationId}...");
+            _logger.LogInformation("Getting questions for round {organizationId}...", organizationId);
 
             var questions = await _dbSet.Where(q => q.OrganizationId == organizationId).ToListAsync();
             return questions;

@@ -17,6 +17,7 @@ namespace Capstone_360s.Interfaces
         ProjectRoundService ProjectRoundService { get; }
         RoundService RoundService { get; }
         TimeframeService TimeframeService { get; }
+        UserTimeframeService UserTimeframeService { get; }
         TeamService TeamService { get; }
     }
 }

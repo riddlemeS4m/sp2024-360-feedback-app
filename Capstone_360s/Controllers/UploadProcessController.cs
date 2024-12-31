@@ -1,14 +1,11 @@
-﻿using Capstone_360s.Interfaces;
+﻿using System.Text.Json;
+using Capstone_360s.Interfaces;
 using Capstone_360s.Interfaces.IService;
 using Capstone_360s.Models.FeedbackDb;
 using Capstone_360s.Models.VMs;
-using Capstone_360s.Services.Configuration;
 using Capstone_360s.Services.Identity;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Capstone_360s.Controllers
 {
@@ -21,23 +18,18 @@ namespace Capstone_360s.Controllers
         public const string Name = "UploadProcess";
         private readonly IManageFeedback _manager;
         private readonly IFeedbackDbServiceFactory _dbServiceFactory;
-        private readonly IRoleManager _roleManager;
         private readonly IAuthorizationService _authService;
-        private readonly IConfigureEnvironment _config;
         private readonly ILogger<UploadProcessController> _logger;
+
         public UploadProcessController(
             IManageFeedback manager,
             IFeedbackDbServiceFactory serviceFactory,
-            IRoleManager roleManager,
             IAuthorizationService authService,
-            IConfigureEnvironment config,
             ILogger<UploadProcessController> logger) 
         { 
             _manager = manager;
             _dbServiceFactory = serviceFactory;
-            _roleManager = roleManager;
             _authService = authService;
-            _config = config;
             _logger = logger;
         }
 
@@ -57,9 +49,10 @@ namespace Capstone_360s.Controllers
             _logger.LogInformation("Moving to the timeframes step...");
 
             var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+            var isInstructor = await _authService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 
             List<Timeframe>? timeframes;
-            if (isAdmin.Succeeded)
+            if (isInstructor.Succeeded)
             {
                 timeframes = (await _dbServiceFactory.TimeframeService.GetTimeframesByOrganizationId(this.OrganizationId)).ToList();
             }
@@ -70,14 +63,15 @@ namespace Capstone_360s.Controllers
 
                 userId = userId == localUserId ? userId : localUserId;
 
-                var timeframeIds = (await _dbServiceFactory.TeamService.GetTimeframeIdsByTeamMember(userId, this.OrganizationId)).ToList();
-                timeframes = (await _dbServiceFactory.TimeframeService.GetTimeframesByIds(timeframeIds)).ToList();
+                var userTimeframes = (await _dbServiceFactory.UserTimeframeService.GetUserTimeframesByUserId(userId)).ToList();
+                timeframes = userTimeframes.Select(x => x.Timeframe).Distinct().ToList();
             }
 
             _logger.LogInformation("Returning timeframes selection view...");
             return View(timeframes);
         }
 
+        [HttpGet]
         [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public IActionResult TimeframeCreate()
         {
@@ -184,9 +178,10 @@ namespace Capstone_360s.Controllers
             _logger.LogInformation("Moving to the projects step...");
 
             var isAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+            var isInstructor = await _authService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
             
             List<Project>? projects;
-            if (isAdmin.Succeeded)
+            if (isInstructor.Succeeded)
             {
                 projects = (await _dbServiceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId)).ToList();
             }
@@ -205,6 +200,65 @@ namespace Capstone_360s.Controllers
             return View(projects);
         }
 
+        [HttpGet]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
+        public async Task<IActionResult> ProjectCreate(int timeframeId)
+        {
+            if(timeframeId == 0)
+            {
+                _logger.LogWarning("No timeframe was specified.");
+                return BadRequest();
+            }
+
+            var vm = await _manager.CreateProjectCreateViewModel(this.OrganizationId, timeframeId);
+
+            _logger.LogInformation("Returning project create view...");
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
+        public async Task<IActionResult> ProjectCreate([Bind(nameof(Project.Name), nameof(Project.Description))] Project project, 
+            string POCEmail, string ManagerEmail, string NewTeamMembers, int timeframeId)
+        {
+            if(timeframeId == 0)
+            {
+                _logger.LogWarning("No timeframe was specified.");
+                return BadRequest();
+            }
+
+            var timeframe = await _dbServiceFactory.TimeframeService.GetByIdAsync(timeframeId);
+
+            if(timeframe == null)
+            {
+                _logger.LogWarning("Timeframe not found.");
+                return NotFound();
+            }
+
+            var vm = await _manager.CreateProjectCreateViewModel(this.OrganizationId, timeframeId);
+
+            if(string.IsNullOrEmpty(project.Name))
+            {
+                _logger.LogWarning("Project name is empty");
+                return View(vm);
+            }
+
+            var returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectsIndex?timeframeId={timeframeId}";
+
+            try {
+                await _manager.CreateProject(project, timeframe, this.OrganizationId, timeframeId, POCEmail, ManagerEmail, NewTeamMembers);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = returnUrl});
+            }
+
+            _logger.LogInformation("Project created successfully, returning to index...");
+            return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = timeframeId });
+        }
+
+        [HttpGet]
         [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectEdit(int timeframeId, string projectId)
         {
@@ -222,38 +276,7 @@ namespace Capstone_360s.Controllers
                 return NotFound();
             }
 
-            var currentTeamMemberIds = project.TeamMembers.Select(x => x.UserId);
-
-            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
-            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
-            var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
-
-            var pocItems = pocs.OrderBy(x => x.FirstName)
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.FirstName} {x.LastName}",
-                    Value = x.Email
-                }).ToList();
-            var managerItems = managers.OrderBy(x => x.FirstName)
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.FirstName} {x.LastName}",
-                    Value = x.Email
-                })
-                .ToList();
-            var memberItems = teamMembers.OrderBy(x => x.User.FirstName)
-                .Where(x => !currentTeamMemberIds.Contains(x.UserId))
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.User.FirstName} {x.User.LastName}",
-                    Value = x.User.Email
-                })
-                .ToList();
-
-            var vm = new ProjectEditVM()
-            {
-                PotentialPOCs = pocItems ?? [],
-                PotentialManagers = managerItems ?? [],
-                PotentialTeamMembers = memberItems ?? [],
-                Project = project
-            };
+            var vm = await _manager.CreateProjectEditViewModel(this.OrganizationId, timeframeId, projectId);
 
             _logger.LogInformation("Returning project edit view...");
             return View(vm);
@@ -277,70 +300,15 @@ namespace Capstone_360s.Controllers
             if(oldProject == null)
             {
                 _logger.LogWarning("Can't find the old project.");
-                return BadRequest();
+                return NotFound();
             }
 
-            var currentTeamMemberIds = oldProject.TeamMembers.Select(x => x.UserId);
-                      
+            var newVM = await _manager.CreateProjectEditViewModel(this.OrganizationId, oldProject.TimeframeId, oldProject.Id.ToString());
 
-            var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
-            var managers = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
-            var teamMembers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(this.OrganizationId));
-
-            var pocItems = pocs.OrderBy(x => x.FirstName)
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.FirstName} {x.LastName}",
-                    Value = x.Email
-                })
-                .ToList();
-            var managerItems = managers.OrderBy(x => x.FirstName)
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.FirstName} {x.LastName}",
-                    Value = x.Email
-                })
-                .ToList();
-            var memberItems = teamMembers.OrderBy(x => x.User.FirstName)
-                .Where(x => !currentTeamMemberIds.Contains(x.UserId))
-                .Select(x => new SelectListItem { 
-                    Text = $"{x.User.FirstName} {x.User.LastName}",
-                    Value = x.User.Email
-                })
-                .ToList();
-
-            vm.PotentialPOCs = pocItems ?? [];
-            vm.PotentialManagers = managerItems ?? [];
-            vm.PotentialTeamMembers = memberItems ?? [];
-            vm.Project.TeamMembers = oldProject.TeamMembers;   
-
-            var pocCondition = oldProject.POC.Email != POCEmail && !string.IsNullOrEmpty(POCEmail);
-            var managerCondition =  oldProject.Manager.Email != ManagerEmail && !string.IsNullOrEmpty(ManagerEmail);        
-
-            oldProject.Name = oldProject.Name != newProject.Name && !string.IsNullOrEmpty(newProject.Name) ? newProject.Name : oldProject.Name;
-            oldProject.Description = oldProject.Description != newProject.Description && !string.IsNullOrEmpty(newProject.Description) ? newProject.Description : oldProject.Description;
-
-            if(pocCondition)
-            {
-                try {
-                    oldProject.POC = await _roleManager.AddNewUser(this.OrganizationId, POCEmail);
-                }
-                catch {
-                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
-                }
-                
-                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.POC.Id.ToString(), _config.Instructor);
-            }
-
-            if(managerCondition)
-            {
-                try {
-                    oldProject.Manager = await _roleManager.AddNewUser(this.OrganizationId, ManagerEmail);
-                }
-                catch {
-                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
-                }
-
-                await _roleManager.AddUserToRole(this.OrganizationId, oldProject.Manager.Id.ToString(), _config.TeamLead);
-            }
+            vm.PotentialPOCs = newVM.PotentialPOCs;
+            vm.PotentialManagers = newVM.PotentialManagers;
+            vm.PotentialTeamMembers = newVM.PotentialTeamMembers;
+            vm.Project.TeamMembers = newVM.Project.TeamMembers;   
 
             if(string.IsNullOrEmpty(NewTeamMembers))
             {
@@ -365,64 +333,6 @@ namespace Capstone_360s.Controllers
                 return View(vm);
             }
 
-            var oldTeamMembers = oldProject.TeamMembers.Select(x => x.User.Email).ToList();
-
-            if(newTeamMembers.Count > 0 && oldTeamMembers.Count >= 0)
-            {
-                foreach(var email in newTeamMembers)
-                {
-                    if(oldTeamMembers.Count == 0 || !oldTeamMembers.Contains(email))
-                    {
-                        var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
-                        if(user.Id == Guid.Empty)
-                        {
-                            try {
-                                user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                            } 
-                            catch (UnauthorizedAccessException ex) {
-                                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
-                            }
-
-                            if(user.Id == Guid.Empty)
-                            {
-                                return BadRequest($"Couldn't add user");
-                            }
-                        }
-                        else
-                        {
-                            if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
-                            {
-                                try {
-                                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                                } 
-                                catch (UnauthorizedAccessException ex) {
-                                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}"});
-                                } 
-                            }
-                        }
-
-                        await _dbServiceFactory.TeamService.AddAsync(new TeamMember {
-                            UserId = user.Id,
-                            ProjectId = oldProject.Id,
-                        });
-                    }
-                }
-            }
-
-            if(newTeamMembers.Count >= 0 && oldTeamMembers.Count > 0)
-            {
-                foreach(var email in oldTeamMembers)
-                {
-                    if(!newTeamMembers.Contains(email))
-                    {
-                        var teamMember = oldProject.TeamMembers.Where(x => x.User.Email == email).FirstOrDefault();
-                        await _dbServiceFactory.TeamService.Remove(teamMember);
-                    }
-                }
-            }
-
-            oldProject.NoOfMembers = oldProject.NoOfMembers != newTeamMembers.Count ? newTeamMembers.Count : oldProject.NoOfMembers;
-
             if(newProject.NoOfRounds < oldProject.NoOfRounds && newProject.NoOfRounds != 0)
             {
                 ModelState.AddModelError("Project.NoOfRounds", "Number of rounds can't be less than the number of existing round folders.");
@@ -437,18 +347,22 @@ namespace Capstone_360s.Controllers
                 return View(vm);
             }
 
-            if(oldProject.NoOfRounds < newProject.NoOfRounds && newProject.NoOfRounds != 0)
-            {
-                oldProject.NoOfRounds = newProject.NoOfRounds;
-                await _manager.CreateProjectRoundsForOneProject(oldProject);
+            var returnUrl = $"/{this.OrganizationId}/UploadProcess/ProjectEdit?timeframeId={oldProject.TimeframeId}&projectId={oldProject.Id}";
+            
+            try {
+                oldProject = await _manager.EditProject(newProject, oldProject, this.OrganizationId, oldProject.TimeframeId, POCEmail, ManagerEmail, newTeamMembers);
+                await _dbServiceFactory.ProjectService.UpdateAsync(oldProject);
             }
-
-            await _dbServiceFactory.ProjectService.UpdateAsync(oldProject);
+            catch (UnauthorizedAccessException)
+            {
+                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = returnUrl});
+            }            
 
             _logger.LogInformation("Completed editing project, returning to the projects index...");
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = vm.Project.TimeframeId, projectId = vm.Project.Id });
         }
 
+        [HttpGet]
         [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> ProjectRoundCreate(int timeframeId)
         {
@@ -539,18 +453,90 @@ namespace Capstone_360s.Controllers
 
             if(pdfs.Count == 0)
             {
-                pdfs =
-                [
-                    new FeedbackPdf {
-                        Project = new Project(),
-                        Round = new Round(),
-                        User = new User()
-                    },
-                ];
+                if(!isAdmin.Succeeded && !isSponsor.Succeeded)
+                {
+                    return RedirectToAction(nameof(UploadProcessController.FeedbackIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = timeframeId, projectId = projectId, roundId = roundId });
+                }
+                else
+                {
+                    pdfs =
+                    [
+                        new FeedbackPdf {
+                            Project = new Project(),
+                            Round = new Round(),
+                            User = new User()
+                        },
+                    ];
+                }
             }
 
             _logger.LogInformation("Return feedback pdf view...");
             return View(pdfs);
+        }
+
+        public async Task<IActionResult> FeedbackIndex(int timeframeId, string projectId, int roundId)
+        {
+            _logger.LogInformation("Moving to the survey submission step...");
+
+            var isSysAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.SystemAdministratorOnlyPolicy);
+
+            List<Feedback>? feedback;
+
+            if(isSysAdmin.Succeeded)
+            {
+                feedback = (await _dbServiceFactory.FeedbackService.GetFeedbackByTimeframeIdAndRoundIdAndProjectId(this.OrganizationId, timeframeId, projectId, roundId)).ToList();
+            }
+            else
+            {
+                var userId = User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value;
+                var localUserId = User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value;
+
+                userId = userId == localUserId ? userId : localUserId;
+
+                feedback = (await _dbServiceFactory.FeedbackService.GetFeedbackByTimeframeIdAndRoundIdAndProjectIdAndUserId(this.OrganizationId, timeframeId, projectId, roundId, userId)).ToList();
+            }
+
+            return View(feedback);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SubmitFeedback(string feedbackId)
+        {
+            _logger.LogInformation("Submit feedback...");
+
+            var isSysAdmin = await _authService.AuthorizeAsync(User, RoleManagerService.SystemAdministratorOnlyPolicy);
+
+            if(string.IsNullOrEmpty(feedbackId))
+            {
+                return BadRequest();
+            }
+
+            var feedback = await _dbServiceFactory.FeedbackService.GetByIdAsync(feedbackId);
+
+            if(feedback == null)
+            {
+                return NotFound();
+            }
+
+            var userId = User.Claims.FirstOrDefault(x => x.Type == "uid")?.Value;
+            var localUserId = User.Claims.FirstOrDefault(x => x.Type == "LocalUser")?.Value;
+
+            userId = userId == localUserId ? userId : localUserId;
+
+            if(feedback.ReviewerId != Guid.Parse(userId) && !isSysAdmin.Succeeded)
+            {
+                _logger.LogCritical("UNAUTHORIZED ACCESS ATTEMPT: User with id {0} tried to access feedback form for user with id {1}. Feedback Id: {2}", userId, feedback.RevieweeId, feedback.Id);
+                return RedirectToAction(nameof(AccountController.AccessDenied), AccountController.Name);
+            }
+
+            return View(feedback);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitFeedback(Feedback feedback)
+        {
+            return View();
         }
 
         [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
@@ -560,6 +546,7 @@ namespace Capstone_360s.Controllers
             return RedirectToAction(nameof(BaseController.UploadRoster), orgType, new { area = orgType, organizationId = OrganizationId, timeframeId = timeframeId });
         }
 
+        [HttpGet]
         [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
         public async Task<IActionResult> AssignPOC(string projectId)
         {
@@ -568,27 +555,7 @@ namespace Capstone_360s.Controllers
                 return BadRequest();
             }
 
-            var project = await _dbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
-            var vm = new AssignPOCVM()
-            {
-                Project = project,
-            };
-
-            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
-            var items = new List<SelectListItem>();
-
-            if(users != null)
-            {
-                foreach(var user in users)
-                {
-                    items.Add(new SelectListItem{
-                        Text = user.GetFullName(),
-                        Value = user.Email
-                    });
-                }
-            }
-
-            vm.POCs = items;            
+            var vm = await _manager.CreateAssignPOCViewModel(this.OrganizationId, projectId);            
 
             return View(vm);
         }
@@ -603,79 +570,37 @@ namespace Capstone_360s.Controllers
                 return BadRequest();
             }
 
-            var project = await _dbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
+            var project = await _dbServiceFactory.ProjectService.GetProjectAndTeamMembersById(projectId);
+
+            if(project == null)
+            {
+                return NotFound();
+            }
+
+            var vm = await _manager.CreateAssignPOCViewModel(this.OrganizationId, projectId);            
 
             if(string.IsNullOrEmpty(POCEmail) && string.IsNullOrEmpty(SelectedPOC))
             {
-                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.Instructor);
-                var items = new List<SelectListItem>();
-
-                if(pocs != null)
-                {
-                    foreach(var poc in pocs)
-                    {
-                        items.Add(new SelectListItem{
-                            Text = poc.GetFullName(),
-                            Value = poc.Email
-                        });
-                    }
-                } 
-
-                var vm = new AssignPOCVM()
-                {
-                    Project = project,
-                    POCs = items
-                };
-
                 return View(vm);
             }
 
             var email = string.IsNullOrEmpty(POCEmail) ? SelectedPOC : POCEmail;
 
-            var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
-            if(user.Id == Guid.Empty)
-            {
-                try {
-                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                } 
-                catch (UnauthorizedAccessException ex) {
-                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
-                }
-
-                if(user.Id == Guid.Empty)
-                {
-                    return BadRequest($"Couldn't add user");
-                }
-
-                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Instructor);
+            var returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}";
+            
+            try {
+                await _manager.AssignPOCToProject(this.OrganizationId, projectId, email);
             }
-            else
+            catch (UnauthorizedAccessException)
             {
-                if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
-                {
-                    try {
-                        user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                    } 
-                    catch (UnauthorizedAccessException ex) {
-                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignPOC?projectId={projectId}"});
-                    } 
-                }
-
-                var roles = await _roleManager.GetRoles(user.Id);
-                if(!roles.Contains(_config.Instructor))
-                {
-                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.Instructor);
-                }
+                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = returnUrl});
             }
-
-            project.POCId = user.Id;
-
-            await _dbServiceFactory.ProjectService.UpdateAsync(project);
 
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), new { timeframeId = project.TimeframeId, organizationId = OrganizationId });
         }
 
-        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
+        [HttpGet]
+        [Authorize(Policy = RoleManagerService.InstructorOnlyPolicy)]
         public async Task<IActionResult> AssignManager(string projectId)
         {
             if(string.IsNullOrEmpty(projectId))
@@ -683,35 +608,14 @@ namespace Capstone_360s.Controllers
                 return BadRequest();
             }
 
-            var project = await _dbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
-            var vm = new AssignPOCVM()
-            {
-                Project = project,
-            };
-
-            var users = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
-            var items = new List<SelectListItem>();
-
-            if(users != null)
-            {
-                foreach(var user in users)
-                {
-                    items.Add(new SelectListItem{
-                        Text = user.GetFullName(),
-                        Value = user.Email
-                    });
-                }
-            }
-
-            vm.POCs = items;            
+            var vm = await _manager.CreateAssignManagerViewModel(this.OrganizationId, projectId);          
 
             return View(vm);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
-        
+        [Authorize(Policy = RoleManagerService.InstructorOnlyPolicy)]
         public async Task<IActionResult> AssignManager(string projectId, string ManagerEmail, string SelectedManager)
         {
             if(string.IsNullOrEmpty(projectId))
@@ -719,72 +623,31 @@ namespace Capstone_360s.Controllers
                 return BadRequest();
             }
 
-            var project = await _dbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
-            var vm = new AssignPOCVM();
+            var project = await _dbServiceFactory.ProjectService.GetProjectAndTeamMembersById(projectId);
+
+            if(project == null)
+            {
+                return NotFound();
+            }
+
+            var vm = await _manager.CreateAssignManagerViewModel(this.OrganizationId, projectId);          
 
             if(string.IsNullOrEmpty(ManagerEmail) && string.IsNullOrEmpty(SelectedManager))
             {
-                var pocs = await _roleManager.GetUsersByRole(this.OrganizationId, _config.TeamLead);
-                var items = new List<SelectListItem>();
-
-                if(pocs != null)
-                {
-                    foreach(var poc in pocs)
-                    {
-                        items.Add(new SelectListItem{
-                            Text = poc.GetFullName(),
-                            Value = poc.Email
-                        });
-                    }
-                } 
-
-                vm.Project = project;
-                vm.POCs = items;
-
                 return View(vm);
             }
 
             var email = string.IsNullOrEmpty(ManagerEmail) ? SelectedManager : ManagerEmail;
 
-            var user = await _dbServiceFactory.UserService.GetUserByEmail(email);
-            if(user.Id == Guid.Empty)
-            {
-                try {
-                    user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                } 
-                catch (UnauthorizedAccessException ex) {
-                    return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignManager?projectId={projectId}"});
-                }
+            var returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignManager?projectId={projectId}";
 
-                if(user.Id == Guid.Empty)
-                {
-                    return View(vm);
-                }
-
-                await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.TeamLead);
+            try {
+                await _manager.AssignManagerToProject(this.OrganizationId, projectId, email);
             }
-            else
+            catch (UnauthorizedAccessException)
             {
-                if(user.MicrosoftId == null || user.MicrosoftId == Guid.Empty)
-                {
-                    try {
-                        user = await _roleManager.AddNewUser(this.OrganizationId, email);
-                    } 
-                    catch (UnauthorizedAccessException ex) {
-                        return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = $"/{this.OrganizationId}/UploadProcess/AssignManager?projectId={projectId}"});
-                    } 
-                }
-
-                var roles = await _roleManager.GetRoles(user.Id);
-                if(!roles.Contains(_config.TeamLead))
-                {
-                    await _roleManager.AddUserToRole(this.OrganizationId, user.MicrosoftId.ToString(), _config.TeamLead);
-                }
+                return RedirectToAction(nameof(AccountController.Login), AccountController.Name, new { returnUrl = returnUrl});
             }
-
-            project.ManagerId = user.Id;
-
-            await _dbServiceFactory.ProjectService.UpdateAsync(project);
 
             return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), new { timeframeId = project.TimeframeId, organizationId = OrganizationId });
         }
@@ -794,6 +657,136 @@ namespace Capstone_360s.Controllers
         public IActionResult UploadBlackboardRoster(int timeframeId)
         {
             return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
+        public async Task<IActionResult> UploadBlackboardRoster(IFormFile roster, int timeframeId)
+        {
+            if(roster == null || timeframeId == 0)
+            {
+                return BadRequest("One or more parameters was null.");
+            }
+
+            try {
+                await _manager.UploadBlackboardRoster(roster, this.OrganizationId, timeframeId);
+                return RedirectToAction(nameof(UploadProcessController.ProjectsIndex), UploadProcessController.Name, new { organizationId = this.OrganizationId, timeframeId = timeframeId });
+            }
+            catch
+            {
+                return BadRequest("There was an error processing the uploaded feedback.");
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Policy = RoleManagerService.InstructorOnlyPolicy)]
+        public async Task<IActionResult> ManageRoster(int timeframeId)
+        {
+            _logger.LogInformation("Moving to the manage roster page...");
+
+            if(timeframeId == 0)
+            {
+                _logger.LogInformation("Couldn't find the timeframe id.");
+                return BadRequest();
+            }
+
+            var userTimeframes = await _dbServiceFactory.UserTimeframeService.GetUsersByTimeframeId(timeframeId);
+            var users = userTimeframes.Select(x => x.User).ToList();
+            var teamMembers = (await _dbServiceFactory.TeamService.GetTeamMembersByTimeframeId(this.OrganizationId, timeframeId)).ToList();
+
+            foreach(var user in users)
+            {
+                if(!teamMembers.Any(x => x.UserId == user.Id))
+                {
+                    teamMembers.Add(new TeamMember {
+                        UserId = user.Id,
+                        User = user
+                    });
+                }
+            }
+
+            teamMembers = teamMembers.OrderBy(x => x.User.FirstName).ToList();
+
+            var projects = (await _dbServiceFactory.ProjectService.GetProjectsByTimeframeId(this.OrganizationId, timeframeId)).ToList() ?? new List<Project>();
+
+            var vm = new ManageRosterVM
+            {
+                Roster = teamMembers,
+                Projects = projects
+            };
+
+            _logger.LogInformation("Fetched users, returning the roster page.");
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = RoleManagerService.ProgramManagerOnlyPolicy)]
+        public async Task<IActionResult> ProjectCreateSilent([FromBody] JsonElement data, [FromQuery] int timeframeId)
+        {
+            string userEmail = data.GetProperty("userEmail").GetString();
+            string projectId = data.GetProperty("projectId").GetString();
+            string newProjectName = data.GetProperty("newProjectName").GetString();
+
+            if(timeframeId == 0)
+            {
+                _logger.LogWarning("No timeframe was specified.");
+                return BadRequest();
+            }
+
+            var timeframe = await _dbServiceFactory.TimeframeService.GetByIdAsync(timeframeId);
+
+            if(timeframe == null)
+            {
+                _logger.LogWarning("Timeframe not found.");
+                return NotFound();
+            }
+
+            
+
+            if(string.IsNullOrEmpty(userEmail))
+            {
+                _logger.LogWarning("No user email was specified.");
+                return BadRequest();
+            }
+
+            var user = await _dbServiceFactory.UserService.GetUserByEmail(userEmail);
+
+            if(user == null)
+            {
+                _logger.LogWarning("User not found.");
+                return NotFound();
+            }
+
+            if(projectId == "0" && string.IsNullOrEmpty(newProjectName))
+            {
+                _logger.LogWarning("No project Id was specified.");
+                return BadRequest();
+            }
+
+            if(projectId != "0")
+            {
+                var existingProject = await _dbServiceFactory.ProjectService.GetByIdAsync(Guid.Parse(projectId));
+
+                if(existingProject == null)
+                {
+                    _logger.LogWarning("Project not found.");
+                    return NotFound();
+                }
+
+                await _manager.CreateProjectSilently(timeframe, this.OrganizationId, timeframeId, projectId, userEmail);
+                return StatusCode(StatusCodes.Status200OK, new { message = "Existing project updated successfully.", newProject = false, projectId = projectId, projectName = existingProject.Name });
+            }
+            else if(!string.IsNullOrEmpty(newProjectName))
+            {
+                var project = await _manager.CreateProjectSilently(timeframe, this.OrganizationId, timeframeId, projectId, userEmail, newProjectName);
+                return StatusCode(StatusCodes.Status200OK, new { message = "New project created successfully.", newProject = true, projectId = project.Id.ToString(), projectName = project.Name });
+            }   
+            else
+            {
+                return BadRequest();
+            }         
         }
     }
 }

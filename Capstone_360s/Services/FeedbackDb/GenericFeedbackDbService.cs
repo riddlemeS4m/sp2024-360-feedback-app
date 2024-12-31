@@ -39,25 +39,90 @@ namespace Capstone_360s.Services.FeedbackDb
 
         public async Task AddRange(IEnumerable<T> entities)
         {
-            await _dbSet.AddRangeAsync(entities);
+            foreach (var entity in entities)
+            {
+                var trackedEntity = _context.GetChangeTracker<T>()
+                    .FirstOrDefault(e => e.Entity.Equals(entity));
+
+                if (trackedEntity == null)
+                {
+                    _dbSet.Attach(entity);
+                    _context.Entry(entity).State = EntityState.Added;
+                }
+            }
+
             await _context.SaveChangesAsync();
         }
 
         public async Task<T> UpdateAsync(T entity)
         {
-            _dbSet.Attach(entity);
-            _context.Entry(entity).State = EntityState.Modified;
+            var trackedEntity = _context.GetChangeTracker<T>()
+                .FirstOrDefault(e => e.Entity.Equals(entity));
+
+            if (trackedEntity != null)
+            {
+                trackedEntity.CurrentValues.SetValues(entity);
+            }
+            else
+            {
+                var key = _context.Model.FindEntityType(typeof(T))
+                            .FindPrimaryKey()
+                            .Properties
+                            .Select(x => x.Name)
+                            .FirstOrDefault();
+
+                var keyValue = typeof(T).GetProperty(key)?.GetValue(entity);
+
+                var existingEntity = await _dbSet.FindAsync(keyValue);
+                if (existingEntity != null)
+                {
+                    _context.Entry(existingEntity).CurrentValues.SetValues(entity);
+                }
+                else
+                {
+                    _dbSet.Attach(entity);
+                    _context.Entry(entity).State = EntityState.Modified;
+                }
+            }
+
             await _context.SaveChangesAsync();
             return entity;
         }
 
         public async Task UpdateRangeAsync(IEnumerable<T> entities)
         {
-            _dbSet.AttachRange(entities);
-            foreach(var entity in entities)
+            foreach (var entity in entities)
             {
-                _context.Entry(entity).State = EntityState.Modified;
+                var trackedEntity = _context.GetChangeTracker<T>()
+                    .FirstOrDefault(e => e.Entity.Equals(entity));
+
+                if (trackedEntity != null)
+                {
+                    trackedEntity.CurrentValues.SetValues(entity);
+                }
+                else
+                {
+                    var key = _context.Model.FindEntityType(typeof(T))
+                                .FindPrimaryKey()
+                                .Properties
+                                .Select(x => x.Name)
+                                .FirstOrDefault();
+
+                    var keyValue = typeof(T).GetProperty(key)?.GetValue(entity);
+
+                    var existingEntity = await _dbSet.FindAsync(keyValue);
+                    if (existingEntity != null)
+                    {
+                        _context.Entry(existingEntity).CurrentValues.SetValues(entity);
+                    }
+                    else
+                    {
+                        _dbSet.Attach(entity);
+                        _context.Entry(entity).State = EntityState.Modified;
+                    }
+                }
             }
+
             await _context.SaveChangesAsync();
         }
 
@@ -69,7 +134,6 @@ namespace Capstone_360s.Services.FeedbackDb
                 return false;
             }
 
-            _dbSet.Attach(entity);
             _dbSet.Remove(entity);
             await _context.SaveChangesAsync();
             return true;
@@ -77,8 +141,32 @@ namespace Capstone_360s.Services.FeedbackDb
 
         public async Task Remove(T entity)
         {
-            _dbSet.Attach(entity);
+            var trackedEntity = _context.GetChangeTracker<T>()
+                .FirstOrDefault(e => e.Entity.Equals(entity));
+
+            if (trackedEntity == null)
+            {
+                _dbSet.Attach(entity);
+            }
+
             _dbSet.Remove(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RemoveRange(IEnumerable<T> entities)
+        {
+            foreach (var entity in entities)
+            {
+                var trackedEntity = _context.GetChangeTracker<T>()
+                    .FirstOrDefault(e => e.Entity.Equals(entity));
+
+                if (trackedEntity == null)
+                {
+                    _dbSet.Attach(entity);
+                }
+            }
+
+            _dbSet.RemoveRange(entities);
             await _context.SaveChangesAsync();
         }
     }

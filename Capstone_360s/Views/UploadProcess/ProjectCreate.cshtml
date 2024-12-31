@@ -1,14 +1,11 @@
-@using Capstone_360s.Services.Identity
-@using Microsoft.AspNetCore.Authorization
 @model Capstone_360s.Models.VMs.ProjectEditVM
-@inject IAuthorizationService authorizationService
 
 @{
     var pattern = @"/^[^@]+@[^@]+ua\.edu$/";
-    var projectName = Model.Project.Name;
-    ViewData["Title"] = $"Edit {projectName}";
+    ViewData["Title"] = $"Create a Project";
 
-    var isSysAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.SystemAdministratorOnlyPolicy);
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
 }
 
 <style>
@@ -39,14 +36,13 @@
     }
 </style>
 
-<h2>Edit @Model.Project.Name</h2>
+<h2>Create a Project</h2>
 <div class="row">
     <div class="col-md-4">
-        <form asp-action="ProjectEdit">
+        <form asp-action="ProjectCreate">
             @Html.AntiForgeryToken()
             <div class="text-danger"></div>
-            <input type="hidden" asp-for="Project.Id" />
-            <input type="hidden" asp-for="Project.TimeframeId" />
+            <input type="hidden" for="timeframeId" name="timeframeId" value=@timeframeId />
 
             <h4>Basic Information</h4>
             <hr />
@@ -61,57 +57,19 @@
                 <span asp-validation-for="Project.Description" class="text-danger"></span>
             </div>
             <br />
-            
-            @if(isSysAdmin.Succeeded)
-            {
-                <h4>Technical Configuration</h4>
-                <hr />
-                <div>
-                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" style="font-size: medium;" title="If you're using a third-party vendor for administering surveys, then changing these parameters affects how the 360 Feedback Portal interprets any survey data that you upload in the future. If you change the parameters here, be sure these changes are reflected in your third-party survey administration tool."> Be careful! Changing these affects your CSV uploads.</i>
-                    <br /><br />
-                </div>
-                <div class="form-group">
-                    <button type="button" id="unlockConfig" class="btn btn-primary">Unlock Configuration</button>
-                    <br /><br />
-                </div>
-                <div class="form-group">
-                    <label asp-for="Project.NoOfMembers" class="control-label">How many members does this project have?</label>
-                    <input type="number" id="noOfMembers" class="form-control" min="2" asp-for="Project.NoOfMembers" disabled />
-                    <span asp-validation-for="Project.NoOfMembers" class="text-danger"></span>
-                </div>
-                <div class="form-group">
-                    <label asp-for="Project.NoOfRounds" class="control-label">How many rounds will this project have?</label>
-                    <input type="number" id="noOfRounds" class="form-control" min="1" asp-for="Project.NoOfRounds" disabled />
-                    <span asp-validation-for="Project.NoOfRounds" class="text-danger"></span>
-                </div>
-                <br />
-            }
 
             <h4>Project Members</h4>
             <hr />
             <div class="form-group">
-                <label class="control-label">Current Team members</label>
+                <label class="control-label">Team Members</label>
                 <ul id="teamMemberList">
-                @if(Model.Project.TeamMembers?.Count != 0)
-                {
-                    @foreach(var member in Model.Project.TeamMembers)
-                    {
-                        <li data-member-id="@member.User.Email">
-                            <span>@member.User.FirstName @member.User.LastName</span>
-                            <button type="button" class="btn-close remove-member" aria-label="Remove"></button>
-                        </li>
-                    }
-                }
-                else
-                {
                     <li id="placeholder-item"><i>No team members yet.</i></li>
-                }
                 </ul>
             </div>
 
             <!-- Hidden Input to Track Changes -->
             <input type="hidden" id="teamMembersInput" name="NewTeamMembers" 
-                value="@string.Join(",", Model.Project.TeamMembers.Select(m => m.User.Email))"/>
+                value=""/>
 
             @if(Model.PotentialTeamMembers?.Count != 0)
             {
@@ -158,7 +116,7 @@
             }
             <div class="form-group">
                 <label for="ManagerEmail" class="control-label">New Manager's Email</label>
-                <input id="managerEmail" name="ManagerEmail" value="@Model.Project.Manager?.Email" class="form-control" placeholder="Individual's UA-issued email"/>
+                <input id="managerEmail" name="ManagerEmail" class="form-control" placeholder="Individual's UA-issued email"/>
                 <span id="managerEmailError" for="ManagerEmail" class="text-danger"></span>
             </div>
             <br />
@@ -182,14 +140,14 @@
             }
             <div class="form-group">
                 <label for="POCEmail" class="control-label">New Sponsor's Email</label>
-                <input id="pocEmail" name="POCEmail" value="@Model.Project.POC?.Email" class="form-control" placeholder="Individual's UA-issued email"/>
+                <input id="pocEmail" name="POCEmail" class="form-control" placeholder="Individual's UA-issued email"/>
                 <span id="pocEmailError" for="POCEmail" class="text-danger"></span>
             </div>
             <br />
 
             <div class="form-group">
                 <input id="save-button" type="submit" value="Save" class="btn btn-primary" /> | 
-                <a class="select-link-primary" asp-action="ProjectsIndex" asp-route-timeframeId="@Model.Project.TimeframeId" asp-route-organizationId="@Model.Project.OrganizationId">Back</a>
+                <a class="select-link-primary" asp-action="ProjectsIndex" asp-route-timeframeId="@timeframeId" asp-route-organizationId="@organizationId">Back</a>
             </div>
         </form>
     </div>
@@ -197,19 +155,6 @@
 
 @section Scripts {
 
-    <script>
-        document.getElementById('unlockConfig').addEventListener('click', function () {
-            const noOfMembers = document.getElementById('noOfMembers');
-            const noOfRounds = document.getElementById('noOfRounds');
-            
-            // Toggle the disabled attribute
-            noOfMembers.disabled = !noOfMembers.disabled;
-            noOfRounds.disabled = !noOfRounds.disabled;
-
-            // Update button text
-            this.textContent = noOfMembers.disabled ? 'Unlock Configuration' : 'Lock Configuration';
-        });
-    </script>
 
     <!-- JavaScript to Handle Event Listeners -->
     <script>

@@ -6,7 +6,9 @@
 
 @{
     ViewData["Title"] = "Landing Page";
+    var isSysAdmin = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.SystemAdministratorOnlyPolicy);
     var isAuthorized = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+    var isInstructor = await AuthorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 }
 
 <br />
@@ -24,9 +26,12 @@
                         </th>
                         @if(isAuthorized.Succeeded)
                         {
-                            <th>
-                                @Html.DisplayNameFor(model => model.Type)
-                            </th>
+                            @if(isSysAdmin.Succeeded)
+                            {
+                                <th>
+                                    @Html.DisplayNameFor(model => model.Type)
+                                </th>
+                            }
                             <th>
                                 @Html.DisplayNameFor(model => model.GDFolderId)
                             </th>
@@ -43,9 +48,12 @@
                             </td>
                             @if(isAuthorized.Succeeded)
                             {
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Type)
-                                </td>
+                                @if(isSysAdmin.Succeeded)
+                                {
+                                    <td>
+                                        @Html.DisplayFor(modelItem => item.Type)
+                                    </td>
+                                }
                                 <td>
                                     <a class="select-link-primary" target="_blank" href="https://drive.google.com/drive/folders/@item.GDFolderId">View on Google Drive</a>
                                 </td> 
@@ -62,14 +70,24 @@
 }
 else
 {
-    <div>
-        <p>You are not currently assigned to a class. Click 'Select a Class' to get started.</p>
-    </div>
-    <div>
-        <p>
-            <a class="btn btn-primary" asp-action="AssignUserToOrganization">Select a Class</a>
-        </p>
-    </div>
+    if(isInstructor.Succeeded)
+    {
+        <div>
+            <p>You are not currently assigned to a class. Click 'Select a Class' to get started.</p>
+        </div>
+        <div>
+            <p>
+                <a class="btn btn-primary" asp-action="AssignUserToOrganization">Select a Class</a>
+            </p>
+        </div>
+    }
+    else
+    {
+       <div>
+            <p>You have not been assigned to a class yet. Please check with your instructor.</p>
+        </div> 
+    }
+    
 }
 
 @if(isAuthorized.Succeeded)

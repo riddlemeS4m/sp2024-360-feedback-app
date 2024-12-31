@@ -130,7 +130,7 @@ namespace Capstone_360s.Services.Identity
                             FROM user_roles 
                             JOIN users ON user_roles.userid = users.userid
                             JOIN roles ON user_roles.roleid = roles.roleid
-                            WHERE rolename LIKE '@role';",
+                            WHERE rolename LIKE @role;",
                         CommandTimeout = CommandTimeoutSeconds  // Timeout for the query
                     };
 
@@ -158,20 +158,31 @@ namespace Capstone_360s.Services.Identity
                     if(!users.Any())
                     {
                         _logger.LogInformation("No users found with the specified role.");
+                        return new List<Capstone_360s.Models.FeedbackDb.User>();
                     }
-
-                    var orgUsers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(organizationId));
-
-                    var returnedUsers = new List<Capstone_360s.Models.FeedbackDb.User>();
-                    foreach(var user in users)
+                    else
                     {
-                        if(orgUsers.Any(u => u.UserId == user.Id))
+                        var emails = new List<string>();
+                        foreach(var user in users)
                         {
-                            returnedUsers.Add(user);
+                            emails.Add(user.Email);
                         }
-                    }
 
-                    return returnedUsers;
+                        var usersToCheck = (await _dbServiceFactory.UserService.GetUsersByListOfEmails(emails)).ToList();
+
+                        var orgUsers = await _dbServiceFactory.UserOrganizationService.GetUsersByOrganizationId(Guid.Parse(organizationId));
+
+                        var returnedUsers = new List<Capstone_360s.Models.FeedbackDb.User>();
+                        foreach(var user in usersToCheck)
+                        {
+                            if(orgUsers.Any(u => u.User.Email == user.Email))
+                            {
+                                returnedUsers.Add(user);
+                            }
+                        }
+
+                        return returnedUsers;
+                    }
                 }
                 catch (MySqlException ex) when (ex.Number == 1042 || ex.Number == 1045 || ex.Number == 0)
                 {
@@ -272,6 +283,11 @@ namespace Capstone_360s.Services.Identity
 
         public async Task AddUserToRole(string organizationId, string userId, string role)
         {
+            if(string.IsNullOrEmpty(organizationId) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
+            {
+                throw new ArgumentNullException("OrganizationId, UserId, and Role cannot be null or empty");
+            }
+
             _logger.LogInformation("Getting users in role 'POC'");
 
             var roles = await GetRoles(Guid.Parse(userId));

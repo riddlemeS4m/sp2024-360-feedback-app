@@ -24,6 +24,20 @@ namespace Capstone_360s.Services.FeedbackDb
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Feedback>> GetFeedbackByTimeframeIdAndRoundIdAndProjectId(string orgId, int timeframeId, string projectId, int roundId)
+        {
+            _logger.LogInformation("Getting feedback by project id, time frame id, and round id...");
+            return await _dbSet.Include(x => x.Timeframe)
+                .Include(x => x.Round)
+                .Include(x => x.Project)
+                .Include(x => x.Reviewer)
+                .Where(f => f.Timeframe.OrganizationId == Guid.Parse(orgId)
+                    && f.TimeframeId == timeframeId 
+                    && f.ProjectId == Guid.Parse(projectId)
+                    && f.RoundId == roundId)
+                .ToListAsync();
+        }
+
         /// <summary>
         ///     
         /// </summary>
@@ -40,6 +54,24 @@ namespace Capstone_360s.Services.FeedbackDb
                 .Where(f => f.TimeframeId == timeframeId && f.RoundId <= roundId)
                 .GroupBy(f => new { f.RevieweeId, f.ReviewerId, f.ProjectId, f.TimeframeId, f.RoundId, f.OriginalResponseId })
                 .Select(g => g.First())
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Feedback>> GetFeedbackByTimeframeIdAndRoundIdAndProjectIdAndUserId(string orgId, int timeframeId, string projectId, int roundId, string userId)
+        {
+            _logger.LogInformation("Getting feedback by project id, time frame id, and round id and user id...");
+
+            return await _dbSet.Include(x => x.Timeframe)
+                .Include(x => x.Round)
+                .Include(x => x.Project)
+                .Include(x => x.Reviewer)
+                .Include(x => x.Reviewee)
+                .Include(x => x.FeedbackPdf)
+                .Where(f => f.Timeframe.OrganizationId == Guid.Parse(orgId)
+                    && f.TimeframeId == timeframeId 
+                    && f.ProjectId == Guid.Parse(projectId)
+                    && f.RoundId == roundId
+                    && f.ReviewerId == Guid.Parse(userId))
                 .ToListAsync();
         }
     }

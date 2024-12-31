@@ -49,7 +49,7 @@ namespace Capstone_360s.Services.Organizations
                 throw new ArgumentNullException("Requested round not found.");
             }
 
-            // filter date parameter not working quite right yet
+            // filter date parameter not working quite right yet (?)
             var data = ReadSurveyResponsesWithFilterDate(roster, Capstone.ExpectedHeaders, nameof(Qualtrics.StartDate), filterDate, Capstone.CustomDateFilter).ToList();
 
             if(data.Count == 0)
@@ -91,12 +91,14 @@ namespace Capstone_360s.Services.Organizations
             defaultQuestions = await _serviceFactory.QuestionService.GetDefaultCapstoneQuestions(organizationId, Capstone.CapstoneQuestions.Take(3).ToList());
 
             // check that all users in the roster are in the database, and add ones that aren't
-            var usersUO = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organizationId);
-            var users = usersUO.Select(x => x.User).ToList();
+            var submittedEmails = data.Select(x => x.Email).ToList();
+            var users = (await _serviceFactory.UserService.GetUsersByListOfEmails(submittedEmails)).ToList();
+            
             var usersToAdd = data.Where(x => !users.Any(u => u.Email == x.Email)).ToList();
             if (usersToAdd.Count != 0)
             {
                 var usersList = new List<Capstone_360s.Models.FeedbackDb.User>();
+                var userOrganizationsList = new List<UserOrganization>();
                 foreach(var user in usersToAdd)
                 {
                     usersList.Add(new Capstone_360s.Models.FeedbackDb.User
@@ -107,11 +109,50 @@ namespace Capstone_360s.Services.Organizations
                         //OrganizationId = organizationId
                     });
                 }
+
+                // should probably make sure each user gets their microsoft id here too
                 await _serviceFactory.UserService.AddRange(usersList);
             }
 
-            usersUO = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organizationId);
-            users = usersUO.Select(x => x.User).ToList();
+            users = (await _serviceFactory.UserService.GetUsersByListOfEmails(submittedEmails)).ToList();
+
+            // add each user to the class/organization
+            var userOrganizations = await _serviceFactory.UserOrganizationService.GetUsersByOrganizationId(organizationId);
+            var missingUserOrgs = users.Where(x => !userOrganizations.Any(u => u.UserId == x.Id)).ToList();
+            var userOrgsToAdd = new List<UserOrganization>();
+
+            if(missingUserOrgs.Count > 0)
+            {
+                foreach(var uo in missingUserOrgs)
+                {
+                    userOrgsToAdd.Add(new UserOrganization {
+                        UserId = uo.Id,
+                        OrganizationId = organizationId,
+                        AddedDate = DateTime.Now
+                    });
+                }
+
+                await _serviceFactory.UserOrganizationService.AddRange(userOrgsToAdd);
+            }
+
+            // add each user to a semester's class roster/timeframe
+            var userTimeframes = await _serviceFactory.UserTimeframeService.GetUsersByTimeframeId(timeframeId);
+            var missingUserTimeframes = users.Where(x => !userTimeframes.Any(u => u.UserId == x.Id)).ToList();
+            var userTimeframesToAdd = new List<UserTimeframe>();
+
+            if(missingUserTimeframes.Count > 0)
+            {
+                foreach(var ut in missingUserTimeframes)
+                {
+                    userTimeframesToAdd.Add(new UserTimeframe {
+                        UserId = ut.Id,
+                        TimeframeId = timeframeId,
+                        AddedDate = DateTime.Now
+                    });
+                }
+
+                await _serviceFactory.UserTimeframeService.AddRange(userTimeframesToAdd);
+            }
 
             // check that all projects in the roster are in the database, and add ones that aren't
             var projects = await _serviceFactory.ProjectService.GetProjectsByTimeframeId(organizationId.ToString(), timeframeId);
@@ -248,24 +289,25 @@ namespace Capstone_360s.Services.Organizations
                     // Loop through members 1 to 6
                     for (int memberIndex = 1; memberIndex < project.NoOfMembers; memberIndex++)
                     {
-                        var memberName = (string)typeof(Qualtrics).GetProperty($"Member{memberIndex}NameConfirmation")?.GetValue(row, null);
+                        var memberName = (string?)typeof(Qualtrics).GetProperty($"Member{memberIndex}NameConfirmation")?.GetValue(row, null)!;
                         if (!string.IsNullOrEmpty(memberName?.Trim()))
                         {
                             var feedbackMember = CreateFeedback(userDicts[row.Email], userNamesDict[memberName.Trim()], project.Id, roundId, timeframeId, row.ResponseId, row.StartDate, row.EndDate);
                             feedback.Add(feedbackMember);
 
+                            // might need to take out exclamation marks and question marks 
                             AddResponses(feedbackMember, new[]
                             {
-                                (string)typeof(Qualtrics).GetProperty($"TechnologyMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"AnalyticalMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"CommunicationMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"ParticipationMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"PerformanceMember{memberIndex}")?.GetValue(row, null)
+                                (string?)typeof(Qualtrics).GetProperty($"TechnologyMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"AnalyticalMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"CommunicationMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"ParticipationMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"PerformanceMember{memberIndex}")?.GetValue(row, null)!
                             }, new[]
                                             {
-                                (string)typeof(Qualtrics).GetProperty($"StrengthsMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"GrowthAreasMember{memberIndex}")?.GetValue(row, null),
-                                (string)typeof(Qualtrics).GetProperty($"CommentsMember{memberIndex}")?.GetValue(row, null)
+                                (string?)typeof(Qualtrics).GetProperty($"StrengthsMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"GrowthAreasMember{memberIndex}")?.GetValue(row, null)!,
+                                (string?)typeof(Qualtrics).GetProperty($"CommentsMember{memberIndex}")?.GetValue(row, null)!
                             });
                         }
                     }

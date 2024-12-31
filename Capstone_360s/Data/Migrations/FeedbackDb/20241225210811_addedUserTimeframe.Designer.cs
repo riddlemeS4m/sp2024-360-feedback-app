@@ -4,6 +4,7 @@ using Capstone_360s.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Capstone_360s.Data.Migrations.FeedbackDb
 {
     [DbContext(typeof(FeedbackMySqlDbContext))]
-    partial class FeedbackMySqlDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241225210811_addedUserTimeframe")]
+    partial class addedUserTimeframe
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -459,8 +462,8 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("TimeframeId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("TimeframeId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime?>("AddedDate")
                         .HasColumnType("datetime(6)");
@@ -712,7 +715,7 @@ namespace Capstone_360s.Data.Migrations.FeedbackDb
 
             modelBuilder.Entity("Capstone_360s.Models.FeedbackDb.UserTimeframe", b =>
                 {
-                    b.HasOne("Capstone_360s.Models.FeedbackDb.Timeframe", "Timeframe")
+                    b.HasOne("Capstone_360s.Models.FeedbackDb.Organization", "Timeframe")
                         .WithMany()
                         .HasForeignKey("TimeframeId")
                         .OnDelete(DeleteBehavior.Cascade)

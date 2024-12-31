@@ -16,7 +16,11 @@ namespace Capstone_360s.Services.FeedbackDb
         {
             _logger.LogInformation("Getting team members by project id...");
 
-            var teamMembers = await _dbSet.Include(x => x.Project).Include(x => x.User).Where(p => p.ProjectId == projectId).ToListAsync();
+            var teamMembers = await _dbSet
+                .Include(x => x.Project)
+                .Include(x => x.User)
+                .Where(p => p.ProjectId == projectId)
+                .ToListAsync();
             return teamMembers;
         }
 
@@ -33,6 +37,20 @@ namespace Capstone_360s.Services.FeedbackDb
             _logger.LogInformation("Getting team members by project id and user id...");
 
             var teamMembers = await _dbSet.Include(x => x.Project).Include(x => x.User).Where(p => p.ProjectId == projectId && p.UserId == userId).ToListAsync();
+            return teamMembers;
+        }
+
+        public async Task<IEnumerable<TeamMember>> GetTeamMembersByTimeframeIdAndUserId(int timeframeId, Guid userId)
+        {
+            _logger.LogInformation("Getting team members by timeframe id and user id...");
+
+            var teamMembers = await _dbSet
+                .Include(x => x.Project)
+                .Include(x => x.User)
+                .Where(x => x.Project.TimeframeId == timeframeId 
+                    && x.UserId == userId)
+                .ToListAsync();
+
             return teamMembers;
         }
 
@@ -95,6 +113,18 @@ namespace Capstone_360s.Services.FeedbackDb
                         && tp.p.OrganizationId == orgGuid)
                 .Select(tp => tp.p.Id)
                 .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<TeamMember>> GetTeamMembersByTimeframeId(string orgId, int timeframeId)
+        {
+            _logger.LogInformation("Getting team members by timeframe id...");
+
+            return await _dbSet
+                .Include(x => x.User)
+                .Include(x => x.Project)
+                .Where(x => x.Project.TimeframeId == timeframeId 
+                    && x.Project.OrganizationId == Guid.Parse(orgId))
                 .ToListAsync();
         }
     }

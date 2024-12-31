@@ -20,6 +20,7 @@ namespace Capstone_360s.Services
         public ProjectRoundService ProjectRoundService { get; set; }
         public RoundService RoundService { get; set;  }
         public TimeframeService TimeframeService { get; set;  }
+        public UserTimeframeService UserTimeframeService { get; set; }
         public TeamService TeamService { get; set; }
 
         public FeedbackDbServiceFactory(IServiceProvider serviceProvider)

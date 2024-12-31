@@ -15,18 +15,15 @@
                     <th>
                         @Html.DisplayNameFor(model => model.Name)
                     </th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr onclick="navigateToSelect('@Url.Action("AssignUserToOrganizationConfirm", new { organizationId = item.Id })')">
+                    <tr onclick="confirmSelection('@Url.Action("AssignUserToOrganizationConfirm", new { organizationId = item.Id })', '@Html.DisplayFor(modelItem => item.Name)')">
                         <td>
+                            @* <a class="select-link-primary" asp-action="AssignUserToOrganizationConfirm" asp-route-organizationId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a> *@
                             @Html.DisplayFor(modelItem => item.Name)
-                        </td>
-                        <td>
-                            <a class="select-link" asp-action="AssignUserToOrganizationConfirm" asp-route-organizationId="@item.Id">Select</a>
                         </td>
                     </tr>
                 }
@@ -45,8 +42,10 @@ else
 @section Scripts {
 
     <script>
-        function navigateToSelect(url) {
-            window.location.href = url;
+        function confirmSelection(url, className) {
+            if (confirm(`Are you sure you want to select "${className}"?`)) {
+                window.location.href = url;
+            }
         }
     </script>
 

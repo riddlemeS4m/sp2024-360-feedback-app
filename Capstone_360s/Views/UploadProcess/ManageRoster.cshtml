@@ -1,0 +1,321 @@
+@using Capstone_360s.Interfaces
+@using System.Web
+@using Capstone_360s.Services.Identity
+@using Microsoft.AspNetCore.Authorization
+@model Capstone_360s.Models.VMs.ManageRosterVM
+@inject IFeedbackDbServiceFactory serviceFactory
+@inject IAuthorizationService authorizationService
+
+@{
+    ViewData["Title"] = "Manage Roster";
+
+    var timeframeId = Context.Request.Query["timeframeId"].ToString();
+    var organizationId = (string)ViewContext.RouteData.Values["organizationId"];
+
+    var timeframe = await serviceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
+
+    var hasNotAssigned = Model.Roster.Any(m => m.Project == null);
+
+    var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
+}
+
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f4f4f4;
+        font-weight: bold;
+    }
+
+    tr {
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    tr:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    td {
+        border-bottom: 1px solid #ddd;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    .not-assigned {
+        color: red;
+        font-weight: bold;
+    }
+
+    .remove-member {
+        background-color: #343a40;  /* Dark Gray (Bootstrap dark) */
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        font-size: 14px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .remove-member:hover {
+        background-color: #212529;  /* Darker shade on hover */
+    }
+</style>
+
+
+<br />
+<h2><a class="select-link-primary" asp-action="ProjectsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">@timeframe.Name</a> Roster</h2>
+<div class="row">
+    @if(Model.Roster.Any(x => x.ProjectId == Guid.Empty))
+    {
+        <div>
+            <i class="bi bi-info-circle" data-bs-toggle="tooltip" style="font-size: medium;" title=""> Some students haven't been assigned to a project yet.</i>
+            <br /><br />
+            <button id="filterButton" class="btn btn-secondary mb-3" onclick="toggleFilter()">Show Not Assigned</button>
+        </div>
+    }
+    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+        <label for="searchInput" style="margin-right: 0.5rem;">Search:</label>
+        <input type="text" id="searchInput" class="form-control" placeholder="Search classes..." oninput="searchTable()" style="width: 300px;">
+    </div>
+    <div class="col-md-8">
+        
+    @if (Model.Roster.Any() && Model.Roster.ElementAt(0).User.FirstName != null)
+    {
+        <div>
+            <div id="classTable" >
+                <table>
+                    <thead>
+                        <tr>
+                            <th>
+                                Full Name
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => Model.Roster.ElementAt(0).User.Email)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => Model.Roster.ElementAt(0).Project)
+                            </th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Roster)
+                        {
+                            <tr onclick="showDetails('@Html.Raw(HttpUtility.JavaScriptStringEncode($"{item.User.FirstName} {item.User.LastName}"))', '@item.ProjectId', '@(item.Project != null ? "Assigned" : "Not Assigned")')" 
+                                data-id="@item.User.Email" 
+                                data-status="@(item.Project != null ? "Assigned" : "Not Assigned")" 
+                                data-project-name="@(item.Project?.Name ?? "Not Assigned")">
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.User.FirstName) @Html.DisplayFor(modelItem => item.User.LastName)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.User.Email)
+                                </td>
+                                <td>
+                                    @if(item.Project != null && !string.IsNullOrEmpty(item.Project?.Name))
+                                    {
+                                        @* <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.ProjectId">@Html.DisplayFor(modelItem => item.Project.Name)</a> *@
+                                        <a class="select-link-primary" href="#">@Html.DisplayFor(modelItem => item.Project.Name)</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="select-link-secondary" href="#" >Not Assigned</a>
+                                    }
+                                </td>
+                                <td>
+                                    <a class="select-link-primary" target="_blank" href="#" ></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    }
+    else
+    {
+        <p>No students have been uploaded yet.</p>
+    }
+    </div>
+    <div class="col-md-4" style="border-left: 1px solid black">
+        <div id="details-card" class="card" style="display:none; padding:20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius:8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="card-title"></h3>
+                <button onclick="dismissCard()" class="btn-close remove-member" aria-label="Close"></button>
+            </div>
+            @Html.AntiForgeryToken()
+            <label for="projectSelect">1. Select an Existing Project:</label>
+            <select id="projectSelect" class="form-control" onchange="enableSubmit()"></select>
+            @if(isAdmin.Succeeded)
+            {
+                <div><p style="margin-top: 20px;">or...</p></div>
+                <label for="newProject">2. Create a New Project:</label>
+                <input type="text" id="newProject" class="form-control" placeholder="New Project Name" oninput="enableSubmit()">
+                <button id="submitBtn" onclick="submitProject()" class="btn btn-primary mt-2" disabled>Submit</button>
+                <div id="success-message" class="text-success mt-2" style="display:none;">Project updated successfully!</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let projects = @Html.Raw(Json.Serialize(Model.Projects));
+        let selectedRow = null;
+        let originalProjectId = null;
+        let filterActive = false;
+        let rowStatus = '';
+
+        projects.push({
+            id: 0,
+            name: '-- Select a Project --'
+        });
+
+        projects.sort((x, y) => {
+            if (x.name.toLowerCase() < y.name.toLowerCase()) return -1;
+            if (x.name.toLowerCase() > y.name.toLowerCase()) return 1;
+        });
+
+        function toggleFilter() {
+            const rows = document.querySelectorAll('#classTable tbody tr');
+            const button = document.getElementById('filterButton');
+
+            if (filterActive) {
+                rows.forEach(row => row.style.display = '');
+                button.textContent = 'Show Not Assigned';
+            } else {
+                rows.forEach(row => {
+                    if (row.getAttribute('data-status') !== 'Not Assigned') {
+                        row.style.display = 'none';
+                    }
+                });
+                button.textContent = 'Clear Filter';
+            }
+            filterActive = !filterActive;
+        }
+
+        function searchTable() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#classTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showDetails(name, projectId, status) {
+            const card = document.getElementById('details-card');
+            const title = document.getElementById('card-title');
+            const projectSelect = document.getElementById('projectSelect');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            title.textContent = name;
+            projectSelect.innerHTML = '';
+            originalProjectId = projectId;
+            rowStatus = status;
+
+            projects.forEach(project => {
+                let option = document.createElement('option');
+                option.value = project.id;
+                option.textContent = project.name;
+                if (project.id == projectId) {
+                    option.selected = true;
+                }
+                projectSelect.appendChild(option);
+            });
+            
+            submitBtn.disabled = true;
+            selectedRow = event.currentTarget;
+            card.style.display = 'block';
+        }
+
+        function enableSubmit() {
+            const selectedProject = document.getElementById('projectSelect').value;
+            const newProject = document.getElementById('newProject').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (newProject || (selectedProject !== originalProjectId && selectedProject != 0 )) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        function dismissCard() {
+            document.getElementById('details-card').style.display = 'none';
+        }
+
+        function submitProject() {
+            const selectedProject = document.getElementById('projectSelect').value;
+            const newProject = document.getElementById('newProject').value;
+            const successMessage = document.getElementById('success-message');
+
+            const organizationId = `@organizationId`;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            
+            fetch(`/${encodeURIComponent(organizationId)}/UploadProcess/ProjectCreateSilent?timeframeId=${encodeURIComponent(@timeframeId)}`, 
+            {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token
+                },
+                body: JSON.stringify({
+                    userEmail: selectedRow.getAttribute('data-id'),
+                    projectId: selectedProject,
+                    newProjectName: newProject
+                })
+            }).then(response => response.json())
+            .then(data => {
+                console.log(data);
+                  if (selectedRow) {
+                      const projectCell = selectedRow.querySelector('td a');
+                      projectCell.textContent = newProject || data.projectName;
+                      projectCell.classList.remove('select-link-secondary');
+                      projectCell.classList.add('select-link-primary');
+                      selectedRow.dataset.projectName = newProject || data.projectName;
+                  }
+                  successMessage.style.display = 'block';
+                  setTimeout(() => {
+                      successMessage.style.display = 'none';
+                      dismissCard();
+                  }, 2000);
+              });
+        }
+
+        @* function filterTable(status) {
+            const rows = document.querySelectorAll('#classTable tbody tr');
+            rows.forEach(row => {
+                if (row.getAttribute('data-status') === status || status === '') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        } *@
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

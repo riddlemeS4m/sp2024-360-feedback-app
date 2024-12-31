@@ -14,7 +14,7 @@
     var timeframe = await feedbackDbServiceFactory.TimeframeService.GetByIdAsync(int.Parse(timeframeId));
     
     var isAdmin = await authorizationService.AuthorizeAsync(User, RoleManagerService.ProgramManagerOnlyPolicy);
-    var isSponsor = await authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
+    var isInstructor = await authorizationService.AuthorizeAsync(User, RoleManagerService.InstructorOnlyPolicy);
 }
 
 <style>
@@ -75,7 +75,7 @@
                                     <a class="select-link-primary" asp-action="ProjectRoundsIndex" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId" asp-route-projectId="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
                                 </td>
                                 <td>
-                                    @if(item.POCId == null && isSponsor.Succeeded)
+                                    @if(item.POCId == null && isInstructor.Succeeded)
                                     {
                                         <a class="select-link-primary" asp-action="AssignPOC" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
                                     }
@@ -89,11 +89,11 @@
                                     }
                                 </td>
                                 <td>
-                                    @if(item.ManagerId == null && isSponsor.Succeeded)
+                                    @if(item.ManagerId == null && isInstructor.Succeeded)
                                     {
                                         <a class="select-link-primary" asp-action="AssignManager" asp-route-organizationId="@item.OrganizationId" asp-route-projectId="@item.Id">Assign</a>
                                     }
-                                    else if(item.POCId == null)
+                                    else if(item.ManagerId == null)
                                     {
                                         <span>Not Assigned</span>
                                     }
@@ -116,46 +116,82 @@
                         }
                     </tbody>
                 </table>
+                @if(!isAdmin.Succeeded)
+                {
+                    <div>
+                        <br>
+                        <div class="form-group">
+                            <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+                    </div>
+                    </div>
+                }
+                else
+                {
+                <div class="form-group">
+                        <br>
+                        <p>
+                            Don't see the project you're looking for?
+                        </p>
+                        <p>
+                            <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
+                            <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a> |
+                            <a class="select-link-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+                        </p>
+                    </div>
+                }
             </div>
             <div class="col-md-3" style="border-left: 1px black solid">
                 <div>
-                        @if(isAdmin.Succeeded)
+                        @if(isInstructor.Succeeded)
                         {
                             <h3 style="text-align: center;">
-                                Admin Tools
+                                Instructor Tools
                             </h3>
                             <hr />
                             <div style="text-align:center;">
                                 <div class="card">
-                                    <h5 class="card-header">Upload a Class Roster</h5>
+                                    <h5 class="card-header">Manage Roster</h5>
                                     <div class="card-body">
                                         @* <h5 class="card-title">Special title treatment</h5> *@
-                                        <p class="card-text" style="font-size: smaller;">Want to take full advantage of the 360 Feedback Portal's capabilities? Download your class roster from Blackboard, and upload it here to assign your students to groups.</p>
-                                        <a class="btn btn-success btn-lg button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster</a>
+                                        <p class="card-text" style="font-size: smaller;">Ready to assign your students to teams and track their survey response progress? </p>
+                                        <a class="btn btn-secondary btn-lg button" asp-controller="UploadProcess" asp-action="ManageRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Manage Roster</a>
                                     </div>
                                 </div>
-                                
                                 <br />
                                 <div class="card">
-                                    <h5 class="card-header">Upload Survey Responses</h5>
+                                    <h5 class="card-header">Release Surveys</h5>
                                     <div class="card-body">
                                         @* <h5 class="card-title">Special title treatment</h5> *@
-                                        <p class="card-text" style="font-size: smaller;">Using an external tool like Qualtrics to collect your survey responses? Upload a CSV file of the responses here to start generating anonymized PDFs for each student.</p>
-                                        <a class="btn btn-warning button btn-lg button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Surveys</a>
+                                        <p class="card-text" style="font-size: smaller;">Ready to release surveys to students and track their response progress? </p>
+                                        <a class="btn btn-primary btn-lg button" asp-controller="UploadProcess" asp-action="ManageRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Release Surveys</a>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                        else if(isSponsor.Succeeded)
-                        {
-                            <div style="text-align:center;">
-                                <p style="width: 60%; margin: 0 auto;">
-                                    Step 1: Upload your class roster.
-                                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
-                                </p>
-                                <div style="margin: 1rem;">
-                                    <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
-                                </div>
+                                <br />
+                                @if(isAdmin.Succeeded)
+                                {
+                                    <h3 style="text-align: center;">
+                                        Admin Tools
+                                    </h3>
+                                    <hr />
+                                    <div class="card">
+                                        <h5 class="card-header">Upload a Class Roster</h5>
+                                        <div class="card-body">
+                                            @* <h5 class="card-title">Special title treatment</h5> *@
+                                            <p class="card-text" style="font-size: smaller;">Want to take full advantage of the 360 Feedback Portal's capabilities? Download your class roster from Blackboard, and upload it here to assign your students to groups.</p>
+                                            <a class="btn btn-success btn-lg button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <br />
+                                    <div class="card">
+                                        <h5 class="card-header">Upload Survey Responses</h5>
+                                        <div class="card-body">
+                                            @* <h5 class="card-title">Special title treatment</h5> *@
+                                            <p class="card-text" style="font-size: smaller;">Using an external tool like Qualtrics to collect your survey responses? Upload a CSV file of the responses here to start generating anonymized PDFs for each student.</p>
+                                            <a class="btn btn-warning button btn-lg button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Surveys</a>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                 </div>
@@ -170,56 +206,86 @@ else
             <p>
                 No project folders have been created yet. 
             </p>
-        </div>
-        <div class="col-md-3">
-            <div>
-                <h4 style="text-align: center;">
-                    Ready to upload?
-                </h4>
-                <hr />
-                <div style="text-align:center;">
-                    <p style="width: 60%; margin: 0 auto;">
-                        Step 1: Upload your class roster.
-                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Only required when administering surveys through the Feedback Portal."></i>
-                    </p>
-                    <div style="margin: 1rem;">
-                        <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster CSV</a>
-                    </div>
-                    <br />
-                    <p style="width: 60%; margin: 0 auto;">
-                        Step 2: Upload your survey response data.
-                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="If you start from scratch, you can skip step 1 and move directly to this step."></i>
-                    </p>
-                    <div style="margin: 1rem;">
-                        <a class="btn btn-success button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Survey CSV</a>
-                    </div>
+            @if(!isAdmin.Succeeded)
+            {
+                <div>
+                    <br>
+                    <div class="form-group">
+                        <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
                 </div>
+                </div>
+            }
+            else
+            {
+            <div class="form-group">
+                    <br>
+                    <p>
+                        Don't see the project you're looking for?
+                    </p>
+                    <p>
+                        <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
+                        <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a> |
+                        <a class="select-link-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
+                    </p>
+                </div>
+            }
+        </div>
+        <div class="col-md-3" style="border-left: 1px black solid">
+            <div>
+                @if(isInstructor.Succeeded)
+                {
+                    <h3 style="text-align: center;">
+                        Instructor Tools
+                    </h3>
+                    <hr />
+                    <div style="text-align:center;">
+                        <div class="card">
+                            <h5 class="card-header">Manage Roster</h5>
+                            <div class="card-body">
+                                @* <h5 class="card-title">Special title treatment</h5> *@
+                                <p class="card-text" style="font-size: smaller;">Ready to assign your students to teams? Edit the teams for each project individually, or click the button below to see each student's team assignment.</p>
+                                <a class="btn btn-secondary btn-lg button" asp-controller="UploadProcess" asp-action="ManageRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Manage Roster</a>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="card">
+                            <h5 class="card-header">Release Surveys</h5>
+                            <div class="card-body">
+                                @* <h5 class="card-title">Special title treatment</h5> *@
+                                <p class="card-text" style="font-size: smaller;">Ready to release surveys to students and track their response progress? </p>
+                                <a class="btn btn-primary btn-lg button" asp-controller="UploadProcess" asp-action="ManageRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Release Surveys</a>
+                            </div>
+                        </div>
+                        <br />
+                        @if(isAdmin.Succeeded)
+                        {
+                            <h3 style="text-align: center;">
+                                Admin Tools
+                            </h3>
+                            <hr />
+                            <div class="card">
+                                <h5 class="card-header">Upload a Class Roster</h5>
+                                <div class="card-body">
+                                    @* <h5 class="card-title">Special title treatment</h5> *@
+                                    <p class="card-text" style="font-size: smaller;">Want to take full advantage of the 360 Feedback Portal's capabilities? Download your class roster from Blackboard, and upload it here to assign your students to groups.</p>
+                                    <a class="btn btn-success btn-lg button" asp-controller="UploadProcess" asp-action="UploadBlackboardRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Roster</a>
+                                </div>
+                            </div>
+                            
+                            <br />
+                            <div class="card">
+                                <h5 class="card-header">Upload Survey Responses</h5>
+                                <div class="card-body">
+                                    @* <h5 class="card-title">Special title treatment</h5> *@
+                                    <p class="card-text" style="font-size: smaller;">Using an external tool like Qualtrics to collect your survey responses? Upload a CSV file of the responses here to start generating anonymized PDFs for each student.</p>
+                                    <a class="btn btn-warning button btn-lg button" asp-controller="UploadProcess" asp-action="RouteUploadRoster" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Upload Surveys</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
-    </div>
-}
-
-@if(!isAdmin.Succeeded)
-{
-    <div>
-        <br>
-        <div class="form-group">
-            <a class="btn btn-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
-       </div>
-    </div>
-}
-else
-{
-<div class="form-group">
-        <br>
-        <p>
-            Don't see the project you're looking for?
-        </p>
-        <p>
-            <a class="btn btn-primary disabled" asp-controller="UploadProcess" asp-action="ProjectCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create New Project</a>
-            <a class="btn btn-secondary disabled" asp-controller="UploadProcess" asp-action="ProjectRoundCreate" asp-route-organizationId="@organizationId" asp-route-timeframeId="@timeframeId">Create Round Folders</a> |
-            <a class="select-link-primary" asp-controller="UploadProcess" asp-action="TimeframesIndex" asp-route-organizationId="@organizationId">Back</a>
-        </p>
     </div>
 }
 

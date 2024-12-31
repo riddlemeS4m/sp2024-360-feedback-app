@@ -14,7 +14,11 @@ namespace Capstone_360s.Services.FeedbackDb
 
         public async Task<IEnumerable<UserOrganization>> GetUsersByOrganizationId(Guid organizationId)
         {
-            return await _dbSet.Include(x => x.User).Where(x => x.OrganizationId == organizationId).ToListAsync();
+            return await _dbSet
+                .Include(x => x.User)
+                .Where(x => x.OrganizationId == organizationId)
+                .Distinct()
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<UserOrganization>> GetOrganizationsByUserId(Guid userId)
